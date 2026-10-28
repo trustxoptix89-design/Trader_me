@@ -6,7 +6,7 @@ import {
 /** Everything lives in its own Postgres schema so it can share a Supabase project without touching `public`. */
 export const sarmaye = pgSchema("sarmaye");
 
-const exchangeEnum = sarmaye.enum("exchange", ["binance", "bybit"]);
+const exchangeEnum = sarmaye.enum("exchange", ["yahoo"]);
 const sideEnum = sarmaye.enum("side", ["long", "short"]);
 const roleEnum = sarmaye.enum("role", ["user", "admin"]);
 const analysisStatusEnum = sarmaye.enum("analysis_status", ["approved", "no-entry", "invalidated", "expired"]);
@@ -48,7 +48,7 @@ export const riskSettings = sarmaye.table("risk_settings", {
 export const watchlist = sarmaye.table("watchlist", {
   id: serial("id").primaryKey(), userId: userId().notNull(),
   symbol: varchar("symbol", { length: 24 }).notNull(),
-  exchange: exchangeEnum("exchange").notNull().default("binance"),
+  exchange: exchangeEnum("exchange").notNull().default("yahoo"),
   enabled: boolean("enabled").notNull().default(true),
   createdAt: ts("createdAt").defaultNow().notNull(),
 }, (t) => ({ uniqueAsset: uniqueIndex("watchlist_unique").on(t.userId, t.symbol, t.exchange) }));

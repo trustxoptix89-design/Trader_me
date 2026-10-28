@@ -1,7 +1,7 @@
 -- Sarmaye initial schema (PostgreSQL). Idempotent: safe to re-run.
 CREATE SCHEMA IF NOT EXISTS sarmaye;
 
-DO $$ BEGIN CREATE TYPE sarmaye.exchange AS ENUM ('binance','bybit'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN CREATE TYPE sarmaye.exchange AS ENUM ('yahoo'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE sarmaye.side AS ENUM ('long','short'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE sarmaye.role AS ENUM ('user','admin'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 DO $$ BEGIN CREATE TYPE sarmaye.analysis_status AS ENUM ('approved','no-entry','invalidated','expired'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS sarmaye.watchlist (
   id serial PRIMARY KEY,
   "userId" bigint NOT NULL,
   symbol varchar(24) NOT NULL,
-  exchange sarmaye.exchange NOT NULL DEFAULT 'binance',
+  exchange sarmaye.exchange NOT NULL DEFAULT 'yahoo',
   enabled boolean NOT NULL DEFAULT true,
   "createdAt" timestamptz NOT NULL DEFAULT now()
 );

@@ -22,7 +22,7 @@ function metricFixture(): MarketMetrics {
 function snapshotFixture(): MarketSnapshot {
   const candles = Array.from({ length: 200 }, (_, i) => candleAt(i));
   return {
-    exchange: "binance", symbol: "BTCUSDT", interval: "15m", candles,
+    exchange: "yahoo", symbol: "BTCUSDT", interval: "15m", candles,
     higherTimeframes: { "4h": candles.slice(-50) },
     derivatives: { markPrice: 110, fundingRate: 0, nextFundingTime: null, openInterest: 1000, openInterestChangePct: 0 },
     fetchedAt: Date.now(), sourceServerTime: candles.at(-1)!.closeTime, isFresh: true, warnings: [],
@@ -92,6 +92,42 @@ describe("20-role council", () => {
   });
 });
 
+describe("council with an independent spot-index source", () => {
+  const risk = assessRisk(DEFAULT_RISK, "long", 100_000, 98_000, 104_000, metricFixture());
+  const context = {
+    direction: "long" as const, risk,
+    macro: { available: true, safe: true, details: ["پنجره امن"] },
+    strategy: { available: true, approved: true, details: ["OOS معتبر"] }, correlatedPositions: 0, maxCorrelatedPositions: 1,
+  };
+  const spot = (): MarketSnapshot => ({
+    ...snapshotFixture(), marketType: "spot-index", dataQuality: { volumeZeroPct: 0, volumeReliable: true },
+    derivatives: { markPrice: null, fundingRate: null, nextFundingTime: null, openInterest: null, openInterestChangePct: null },
+  });
+
+  it("abstains (never approves) the three derivatives roles and still lets the final role judge only rejections", () => {
+    const reviews = runCouncil(spot(), metricFixture(), context);
+    expect([11, 12, 13].map((i) => reviews[i].verdict)).toEqual(["abstain", "abstain", "abstain"]);
+    expect(reviews[11].limitations.join(" ")).toContain("اجرا نمی‌شود");
+    expect(reviews.filter((r) => r.verdict === "reject")).toHaveLength(0);
+    expect(reviews[19].verdict).toBe("approve");
+  });
+
+  it("rejects volume and liquidity roles when the source volume is unreliable", () => {
+    const snap = { ...spot(), dataQuality: { volumeZeroPct: 60, volumeReliable: false } };
+    const reviews = runCouncil(snap, metricFixture(), context);
+    expect(reviews[8].verdict).toBe("reject");
+    expect(reviews[10].verdict).toBe("reject");
+    expect(reviews[8].reasonsAgainst.join(" ")).toContain("حجم منبع ناقص");
+    expect(reviews[19].verdict).toBe("reject");
+  });
+
+  it("still rejects missing derivatives when the snapshot is not a spot-index", () => {
+    const snap = { ...snapshotFixture(), derivatives: { markPrice: null, fundingRate: null, nextFundingTime: null, openInterest: null, openInterestChangePct: null } };
+    const reviews = runCouncil(snap, metricFixture(), context);
+    expect([11, 12, 13].map((i) => reviews[i].verdict)).toEqual(["reject", "reject", "reject"]);
+  });
+});
+
 describe("deterministic backtest", () => {
   function fixture(): Candle[] {
     const candles = Array.from({ length: 300 }, (_, i) => candleAt(i));
@@ -102,7 +138,7 @@ describe("deterministic backtest", () => {
 
   it("enters on the next bar and resolves ambiguous entry candles Stop-First", () => {
     const result = runBacktest({
-      candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "binance", interval: "15m",
+      candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "yahoo", interval: "15m",
       params: { fast: 2, slow: 3, atrStop: 1, rewardRisk: 2, maxHoldingBars: 48 },
     });
     expect(result.trades.length).toBeGreaterThan(0);
@@ -119,7 +155,7 @@ describe("deterministic backtest", () => {
 
   it("repeats trade results exactly for identical frozen inputs", () => {
     const options = {
-      candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "binance" as const, interval: "15m" as const,
+      candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "yahoo" as const, interval: "15m" as const,
       params: { fast: 2, slow: 3, atrStop: 1, rewardRisk: 2, maxHoldingBars: 48 },
     };
     const a = runBacktest(options), b = runBacktest(options);
@@ -130,8 +166,8 @@ describe("deterministic backtest", () => {
   });
 
   it("rejects insufficient history and invalid parameters", () => {
-    expect(() => runBacktest({ candles: fixture().slice(0, 200), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "binance", interval: "15m" })).toThrow("۳۰۰");
-    expect(() => runBacktest({ candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "binance", interval: "15m", params: { fast: 50, slow: 20 } })).toThrow("پارامتر");
+    expect(() => runBacktest({ candles: fixture().slice(0, 200), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "yahoo", interval: "15m" })).toThrow("۳۰۰");
+    expect(() => runBacktest({ candles: fixture(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "yahoo", interval: "15m", params: { fast: 50, slow: 20 } })).toThrow("پارامتر");
   });
 });
 
@@ -145,7 +181,7 @@ describe("backtest reporting integrity", () => {
     return c;
   };
   const run = () => runBacktest({
-    candles: recovering(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "binance", interval: "15m",
+    candles: recovering(), settings: DEFAULT_RISK, symbol: "BTCUSDT", exchange: "yahoo", interval: "15m",
     params: { fast: 2, slow: 3, atrStop: 1, rewardRisk: 2, maxHoldingBars: 48 },
   });
 

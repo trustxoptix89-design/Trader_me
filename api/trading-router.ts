@@ -11,7 +11,7 @@ import { calculatePosition, assessRisk } from "./engines/risk";
 import { DEFAULT_RISK, type AnalysisResult, type BacktestResult, type Exchange, type RiskSettings } from "@contracts/types";
 import { TRPCError } from "@trpc/server";
 
-const exchangeSchema = z.enum(["binance", "bybit"]);
+const exchangeSchema = z.enum(["yahoo"]);
 const intervalSchema = z.enum(["1m", "3m", "5m", "15m", "30m", "1h", "4h", "1d"]);
 const symbolSchema = z.string().trim().toUpperCase().regex(/^[A-Z0-9]{5,20}$/);
 const riskSchema = z.object({
@@ -75,11 +75,9 @@ export const tradingRouter = createRouter({
     fast: z.number().int().min(2).max(100).default(20), slow: z.number().int().min(3).max(200).default(50),
     atrStop: z.number().min(0.5).max(5).default(1.5), rewardRisk: z.number().min(1).max(10).default(2), maxHoldingBars: z.number().int().min(1).max(500).default(48),
   })).mutation(async ({ ctx, input }) => {
-    let exchange: Exchange = input.exchange, candles;
-    try { candles = await fetchCandles(exchange, input.symbol, input.interval, input.limit); }
-    catch { exchange = exchange === "binance" ? "bybit" : "binance"; candles = await fetchCandles(exchange, input.symbol, input.interval, input.limit); }
-    const start = candles[0]?.time ?? Date.now(), end = candles.at(-1)?.time ?? Date.now();
-    const funding = await fetchFundingHistory(exchange, input.symbol, start, end).catch(() => []);
+    const exchange: Exchange = input.exchange;
+    const candles = await fetchCandles(exchange, input.symbol, input.interval, input.limit);
+    const funding = await fetchFundingHistory();
     const result = runBacktest({ candles, funding, settings: await getRisk(ctx.user.id), params: input, symbol: input.symbol, exchange, interval: input.interval });
     await getDb().insert(backtests).values({ id: result.runId, userId: ctx.user.id, symbol: input.symbol, exchange, interval: input.interval, strategyVersion: STRATEGY_VERSION, result });
     return result;
@@ -121,7 +119,7 @@ export const tradingRouter = createRouter({
     const db = getDb(), [trade] = await db.select().from(paperTrades).where(and(eq(paperTrades.id, input.id), eq(paperTrades.userId, ctx.user.id), eq(paperTrades.status, "open"))).limit(1);
     if (!trade) throw new TRPCError({ code: "NOT_FOUND", message: "موقعیت باز یافت نشد" });
     const snapshot = await fetchSnapshotWithFallback(trade.exchange, trade.symbol, "1m");
-    if (snapshot.exchange !== trade.exchange || !snapshot.isFresh) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "قیمت تازه از صرافی مبدأ موقعیت در دسترس نیست؛ موقعیت بدون تغییر باز ماند" });
+    if (snapshot.exchange !== trade.exchange || !snapshot.isFresh) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "قیمت تازه از منبع داده در دسترس نیست؛ موقعیت بدون تغییر باز ماند" });
     const exit = snapshot.derivatives.markPrice ?? snapshot.candles.at(-1)!.close;
     const settings = await getRisk(ctx.user.id), exitFee = exit * trade.quantity * settings.feePct / 100;
     const sign = trade.side === "long" ? 1 : -1;
@@ -157,11 +155,11 @@ export const tradingRouter = createRouter({
   publicConfig: publicQuery.query(() => ({ vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? null, pushConfigured: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY), realTradingEnabled: false })),
   news: publicQuery.query(() => fetchNews()),
   macro: publicQuery.query(() => macroAssessment()),
-  sourceHealth: publicQuery.query(async () => Promise.all([connectorHealth("binance"), connectorHealth("bybit")])),
+  sourceHealth: publicQuery.query(async () => Promise.all([connectorHealth("yahoo")])),
   health: publicQuery.query(async () => {
     let database = false;
     try { await getDb().select().from(riskSettings).limit(1); database = true; } catch { database = false; }
-    const [sources, scheduler, events] = await Promise.all([Promise.all([connectorHealth("binance"), connectorHealth("bybit")]), getDb().select().from(schedulerState).limit(1).catch(() => []), getDb().select().from(systemEvents).orderBy(desc(systemEvents.createdAt)).limit(10).catch(() => [])]);
+    const [sources, scheduler, events] = await Promise.all([Promise.all([connectorHealth("yahoo")]), getDb().select().from(schedulerState).limit(1).catch(() => []), getDb().select().from(systemEvents).orderBy(desc(systemEvents.createdAt)).limit(10).catch(() => [])]);
     return { ok: database, database, sources, scheduler: scheduler[0] ?? null, events, serverTime: Date.now(), realTradingEnabled: false, schedulerMode: "in-process + protected external cron endpoint" };
   }),
 });
