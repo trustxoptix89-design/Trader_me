@@ -1,5 +1,5 @@
 import {
-  pgSchema, serial, varchar, text, timestamp, bigint, integer,
+  pgSchema, serial, varchar, text, timestamp, integer,
   doublePrecision, boolean, jsonb, uniqueIndex, index,
 } from "drizzle-orm/pg-core";
 
