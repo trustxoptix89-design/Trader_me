@@ -1,0 +1,6 @@
+export const fmt = (value: number | null | undefined, digits = 2) => value === null || value === undefined || !Number.isFinite(value) ? "—" : new Intl.NumberFormat("fa-IR", { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(value);
+export const price = (value: number | null | undefined) => value === null || value === undefined ? "—" : new Intl.NumberFormat("en-US", { maximumFractionDigits: value < 1 ? 6 : 2 }).format(value);
+export const pct = (value: number | null | undefined, digits = 2) => value === null || value === undefined ? "—" : `${fmt(value, digits)}٪`;
+export const dateTime = (value: number | Date | null | undefined) => value === null || value === undefined ? "—" : new Intl.DateTimeFormat("fa-IR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(value instanceof Date ? value : new Date(value));
+export const age = (value: number | null | undefined) => !value ? "—" : `${fmt(Math.max(0, (Date.now() - value) / 1000), 0)} ثانیه پیش`;
+export const faStatus = (status: string) => ({ approved: "تأیید نهایی", "no-entry": "عدم ورود", invalidated: "باطل", expired: "منقضی", open: "باز", closed: "بسته", long: "خرید", short: "فروش", robust: "پایدار", conditional: "مشروط", fragile: "شکننده", unsupported: "پشتیبانی‌نشده" } as Record<string, string>)[status] ?? status;
