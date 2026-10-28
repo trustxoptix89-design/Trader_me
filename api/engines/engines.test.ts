@@ -206,8 +206,8 @@ describe("shared chart indicators (same code as the analysis engine)", () => {
     expect(flat.macd).toHaveLength(60);
     expect(flat.macd[24]).toBeNull();
     expect(flat.macd[25]).toBe(0);
-    expect(flat.signal[32]).toBe(0);
-    expect(flat.signal[31]).toBeNull();
+    expect(flat.signal[33]).toBe(0);
+    expect(flat.signal[32]).toBeNull();
     const rising = macdSeries(Array.from({ length: 80 }, (_, i) => 100 + i));
     const i = 79;
     expect(rising.macd[i]!).toBeGreaterThan(0);
