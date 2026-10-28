@@ -1,0 +1,48 @@
+name: e2e-live
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/e2e-live-proof]
+    paths: ['e2e/**', '.github/workflows/e2e-live.yml']
+permissions:
+  contents: write
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: sarmaye_e2e }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/sarmaye_e2e
+      OWNER_PASSWORD: e2e-owner-password-123
+      SESSION_SECRET: e2e-session-secret-0123456789abcdef0123456789abcdef
+      CRON_SECRET: e2e-cron-secret-0123456789abcdef
+      DISABLE_SCHEDULER: "true"
+      PORT: "3000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
+      - name: Start server
+        run: |
+          NODE_ENV=production nohup node dist/boot.js > server.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
+          curl -sf http://localhost:3000/ >/dev/null || (cat server.log; exit 1)
+      - name: Live browser proof
+        run: node e2e/live-proof.mjs
+      - name: Publish evidence branch
+        if: always()
+        run: |
+          mkdir -p evidence && cp -r e2e-out/* evidence/ 2>/dev/null || true
+          cp server.log evidence/server.log || true
+          cd evidence && git init -q -b e2e-evidence && git config user.name "e2e-bot" && git config user.email "e2e-bot@users.noreply.github.com"
+          git add -A && git commit -qm "e2e evidence ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" e2e-evidence
