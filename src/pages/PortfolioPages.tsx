@@ -12,7 +12,7 @@ import type { Exchange } from "@contracts/types";
 export function AssetsPage() {
   const { isAuthenticated } = useAuth(), market = useMarket(), navigate = useNavigate(), utils = trpc.useUtils();
   const query = trpc.trading.watchlist.useQuery(undefined, { enabled: isAuthenticated });
-  const [symbol, setSymbol] = useState("BTCUSDT"), [exchange, setExchange] = useState<Exchange>("yahoo");
+  const [symbol, setSymbol] = useState("BTCUSDT"), exchange: Exchange = "yahoo";
   const invalidate = () => void utils.trading.watchlist.invalidate();
   const add = trpc.trading.watchlistAdd.useMutation({ onSuccess: invalidate }), remove = trpc.trading.watchlistRemove.useMutation({ onSuccess: invalidate });
   if (!isAuthenticated) return <><PageTitle eyebrow="WATCHLIST" title="دارایی‌های تحت پایش" description="فهرست شخصی و پایدار برای پایش و هشدار." /><LoginRequired feature="فهرست پایش" /></>;

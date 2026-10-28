@@ -1,9 +1,9 @@
 import { RefreshCw } from "lucide-react";
 import { useMarket } from "@/providers/market";
-import type { Exchange, Interval } from "@contracts/types";
+import type { Interval } from "@contracts/types";
 
 export function MarketControls({ compact = false }: { compact?: boolean }) {
-  const { exchange, symbol, interval, setExchange, setSymbol, setInterval, refresh, loading } = useMarket();
+  const { symbol, interval, setSymbol, setInterval, refresh, loading } = useMarket();
   return <form className={`market-controls ${compact ? "compact" : ""}`} onSubmit={(e) => { e.preventDefault(); void refresh(); }}>
     <label><span>دارایی</span><select value={symbol} onChange={(e) => setSymbol(e.target.value)}>{["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "DOGEUSDT"].map((s) => <option key={s}>{s}</option>)}</select></label>
     <label><span>منبع داده</span><output className="source-chip">Yahoo Finance · شاخص اسپات</output></label>
