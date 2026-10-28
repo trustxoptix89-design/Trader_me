@@ -26,7 +26,7 @@ describe("cross-source validation", () => {
     const p = mk(10, () => 100);
     p[9].closeTime = NOW + H; // forming
     const r = mk(10, () => 100);
-    expect(compareFeeds(p, r, "ref", 9 * H + 10).alignedBars).toBe(8);
+    expect(compareFeeds(p, r, "ref", 9 * H + 10).alignedBars).toBe(9);
     expect(compareFeeds(mk(3, () => 100), mk(3, () => 100), "ref", NOW).status).toBe("insufficient");
     expect(compareFeeds(mk(40, () => 100), mk(40, () => 100, 1e12), "ref", NOW).status).toBe("insufficient");
   });
