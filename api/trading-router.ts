@@ -33,7 +33,7 @@ export async function getRisk(userId: number): Promise<RiskSettings> {
 async function ensureWatchlist(userId: number) {
   const db = getDb();
   const rows = await db.select().from(watchlist).where(eq(watchlist.userId, userId));
-  if (!rows.length) await db.insert(watchlist).values([{ userId, symbol: "BTCUSDT" }, { userId, symbol: "ETHUSDT" }, { userId, symbol: "SOLUSDT" }]).onDuplicateKeyUpdate({ set: { enabled: true } });
+  if (!rows.length) await db.insert(watchlist).values([{ userId, symbol: "BTCUSDT" }, { userId, symbol: "ETHUSDT" }, { userId, symbol: "SOLUSDT" }]).onConflictDoUpdate({ target: [watchlist.userId, watchlist.symbol, watchlist.exchange], set: { enabled: true } });
   return db.select().from(watchlist).where(eq(watchlist.userId, userId)).orderBy(desc(watchlist.createdAt));
 }
 
@@ -90,13 +90,13 @@ export const tradingRouter = createRouter({
   }),
   riskGet: authedQuery.query(({ ctx }) => getRisk(ctx.user.id)),
   riskUpdate: authedQuery.input(riskSchema).mutation(async ({ ctx, input }) => {
-    await getDb().insert(riskSettings).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: input });
+    await getDb().insert(riskSettings).values({ userId: ctx.user.id, ...input }).onConflictDoUpdate({ target: riskSettings.userId, set: input });
     return getRisk(ctx.user.id);
   }),
   positionSize: publicQuery.input(z.object({ settings: riskSchema, entry: z.number().positive(), stop: z.number().positive() })).query(({ input }) => calculatePosition(input.settings, input.entry, input.stop)),
   watchlist: authedQuery.query(({ ctx }) => ensureWatchlist(ctx.user.id)),
   watchlistAdd: authedQuery.input(z.object({ symbol: symbolSchema, exchange: exchangeSchema })).mutation(async ({ ctx, input }) => {
-    await getDb().insert(watchlist).values({ userId: ctx.user.id, ...input }).onDuplicateKeyUpdate({ set: { enabled: true } });
+    await getDb().insert(watchlist).values({ userId: ctx.user.id, ...input }).onConflictDoUpdate({ target: [watchlist.userId, watchlist.symbol, watchlist.exchange], set: { enabled: true } });
     return ensureWatchlist(ctx.user.id);
   }),
   watchlistRemove: authedQuery.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
@@ -152,7 +152,7 @@ export const tradingRouter = createRouter({
     await getDb().update(notifications).set({ read: true }).where(and(eq(notifications.id, input.id), eq(notifications.userId, ctx.user.id))); return { ok: true };
   }),
   pushSubscribe: authedQuery.input(z.object({ endpoint: z.string().url().max(1024), keys: z.object({ p256dh: z.string(), auth: z.string() }) })).mutation(async ({ ctx, input }) => {
-    await getDb().insert(pushSubscriptions).values({ userId: ctx.user.id, endpoint: input.endpoint, keys: input.keys }).onDuplicateKeyUpdate({ set: { keys: input.keys } }); return { ok: true };
+    await getDb().insert(pushSubscriptions).values({ userId: ctx.user.id, endpoint: input.endpoint, keys: input.keys }).onConflictDoUpdate({ target: [pushSubscriptions.userId, pushSubscriptions.endpoint], set: { keys: input.keys } }); return { ok: true };
   }),
   publicConfig: publicQuery.query(() => ({ vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? null, pushConfigured: Boolean(process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY), realTradingEnabled: false })),
   news: publicQuery.query(() => fetchNews()),

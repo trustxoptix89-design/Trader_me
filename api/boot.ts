@@ -5,13 +5,12 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "./router";
 import { createContext } from "./context";
 import { env } from "./lib/env";
-import { createOAuthCallbackHandler } from "./kimi/auth";
-import { Paths } from "@contracts/constants";
 import { log } from "./lib/logger";
 import { handleClientLog } from "./lib/clientlog";
 import { REQUEST_ID_HEADER, runWithRequestId } from "./lib/requestcontext";
 import { jobsRoutes } from "./routes/jobs";
 import { startScheduler } from "./scheduler";
+import { runMigrations } from "./queries/migrate";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -61,7 +60,6 @@ app.use("*", async (c, next) => {
 // bodyless request (DELETE/PATCH on the app's own REST routes) 500s at dispatch.
 // /api/log keeps its own 64KB caps in lib/clientlog.ts, so it needs no middleware.
 app.use("/api/trpc/*", bodyLimit({ maxSize: 1024 * 1024 }));
-app.get(Paths.oauthCallback, createOAuthCallbackHandler());
 app.route("/api/jobs", jobsRoutes);
 startScheduler();
 app.use("/api/trpc/*", async (c) => {
@@ -100,6 +98,7 @@ app.onError((err, c) => {
 export default app;
 
 if (env.isProduction) {
+  await runMigrations();
   const { serve } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);

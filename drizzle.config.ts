@@ -1,16 +1,11 @@
-import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to run drizzle commands");
-}
-
+// Dev-only helper (e.g. `drizzle-kit generate` to diff schema changes). Production uses the hand-reviewed
+// SQL files in db/migrations, applied at boot by api/queries/migrate.ts.
 export default defineConfig({
   schema: "./db/schema.ts",
-  out: "./db/migrations",
-  dialect: "mysql",
-  dbCredentials: {
-    url: connectionString,
-  },
+  out: "./db/drizzle-scratch",
+  dialect: "postgresql",
+  schemaFilter: ["sarmaye"],
+  dbCredentials: { url: process.env.DATABASE_URL ?? "" },
 });

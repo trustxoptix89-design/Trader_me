@@ -15,7 +15,7 @@ async function notify(userId: number, kind: string, title: string, body: string,
   const db = getDb();
   const existing = await db.select({ id: notifications.id }).from(notifications).where(eq(notifications.dedupeKey, dedupeKey)).limit(1);
   if (existing.length) return false;
-  await db.insert(notifications).values({ userId, alertId, kind, title, body, dedupeKey }).onDuplicateKeyUpdate({ set: { dedupeKey } });
+  await db.insert(notifications).values({ userId, alertId, kind, title, body, dedupeKey }).onConflictDoNothing({ target: notifications.dedupeKey });
   const publicKey = process.env.VAPID_PUBLIC_KEY, privateKey = process.env.VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) return true;
   try {
@@ -82,12 +82,12 @@ export async function runScheduler(): Promise<{ ok: boolean; alertsChecked: numb
         }
       } catch { /* a later scheduler run retries; stale price never closes a trade */ }
     }
-    await db.insert(schedulerState).values({ id: "main", lastRunAt: new Date(), lastSuccessAt: new Date(), lastError: null, runCount: 1 }).onDuplicateKeyUpdate({ set: { lastRunAt: new Date(), lastSuccessAt: new Date(), lastError: null, runCount: sql`${schedulerState.runCount} + 1` } });
+    await db.insert(schedulerState).values({ id: "main", lastRunAt: new Date(), lastSuccessAt: new Date(), lastError: null, runCount: 1 }).onConflictDoUpdate({ target: schedulerState.id, set: { lastRunAt: new Date(), lastSuccessAt: new Date(), lastError: null, runCount: sql`${schedulerState.runCount} + 1` } });
     await db.insert(systemEvents).values({ level: "info", event: "scheduler.success", detail: `${checked} alerts, ${created} notifications` });
     return { ok: true, alertsChecked: checked, notificationsCreated: created };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await db.insert(schedulerState).values({ id: "main", lastRunAt: new Date(), lastError: message, runCount: 1 }).onDuplicateKeyUpdate({ set: { lastRunAt: new Date(), lastError: message, runCount: sql`${schedulerState.runCount} + 1` } }).catch(() => undefined);
+    await db.insert(schedulerState).values({ id: "main", lastRunAt: new Date(), lastError: message, runCount: 1 }).onConflictDoUpdate({ target: schedulerState.id, set: { lastRunAt: new Date(), lastError: message, runCount: sql`${schedulerState.runCount} + 1` } }).catch(() => undefined);
     await db.insert(systemEvents).values({ level: "error", event: "scheduler.failure", detail: message }).catch(() => undefined);
     return { ok: false, alertsChecked: checked, notificationsCreated: created, error: message };
   } finally { running = false; }
