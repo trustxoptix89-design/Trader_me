@@ -1,14 +1,17 @@
+import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowLeft, CheckCircle2, CircleDashed, Database, FlaskConical, ShieldAlert } from "lucide-react";
 import { useMarket } from "@/providers/market";
 import { MarketControls } from "@/components/MarketControls";
 import { MarketChart } from "@/components/MarketChart";
+import { TradingViewChart } from "@/components/TradingViewChart";
 import { SignalCard } from "@/components/SignalCard";
 import { EmptyState, ErrorState, LoadingState, Metric, PageTitle, Panel, StatusBadge } from "@/components/Common";
 import { age, dateTime, fmt, pct, price } from "@/lib/format";
 
 export default function Dashboard() {
   const { result, loading, error, refresh } = useMarket();
+  const [chartMode, setChartMode] = useState<"signal" | "tv">("signal");
   return <>
     <PageTitle eyebrow="MISSION CONTROL / REAL DATA" title="مرکز تصمیم معاملات" description="تحلیل، داوری و ریسک در یک مسیر قابل ردیابی؛ بدون عدد نمونه و بدون سفارش واقعی." />
     <MarketControls />
@@ -18,7 +21,13 @@ export default function Dashboard() {
     {result && <div className="dashboard-grid">
       <Panel className="market-panel" title={`${result.snapshot.symbol} / ${result.snapshot.interval}`} action={<StatusBadge tone={result.snapshot.isFresh ? "good" : "bad"}>{result.snapshot.isFresh ? "تازه" : "کهنه"}</StatusBadge>}>
         <div className="quote-row"><div><span>قیمت Close کندل بسته</span><strong dir="ltr">{price(result.metrics.price)}</strong></div><span className={Number(result.metrics.priceChangePct) >= 0 ? "positive" : "negative"}>{pct(result.metrics.priceChangePct)}</span></div>
-        <MarketChart candles={result.snapshot.candles} higher={result.snapshot.higherTimeframes["4h"]} interval={result.snapshot.interval} signal={result.signal} />
+        <div className="chart-tabs" role="group" aria-label="نوع چارت">
+          <button type="button" aria-pressed={chartMode === "signal"} onClick={() => setChartMode("signal")}>چارت سیگنال</button>
+          <button type="button" aria-pressed={chartMode === "tv"} onClick={() => setChartMode("tv")}>TradingView (ابزار رسم)</button>
+        </div>
+        {chartMode === "signal"
+          ? <MarketChart candles={result.snapshot.candles} higher={result.snapshot.higherTimeframes["4h"]} interval={result.snapshot.interval} signal={result.signal} />
+          : <TradingViewChart symbol={result.snapshot.symbol} interval={result.snapshot.interval} exchange={result.snapshot.exchange} />}
         <div className="source-line"><Database size={14} /><span>{result.snapshot.exchange} · آخرین کندل {dateTime(result.snapshot.candles.at(-1)?.time)} · دریافت {age(result.snapshot.fetchedAt)}</span></div>
       </Panel>
       <Panel className="signal-panel" title="تصمیم موتور سیگنال"><SignalCard signal={result.signal} /></Panel>
