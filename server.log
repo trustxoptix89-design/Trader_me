@@ -1,0 +1,15 @@
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P06',
+  message: 'schema "sarmaye" already exists, skipping',
+  file: 'schemacmds.c',
+  line: '132',
+  routine: 'CreateSchemaCommand'
+}
+{"ts":"2026-10-28T23:28:06.632Z","level":"info","msg":"migrations applied","files":["0001_init.sql"]}
+{"ts":"2026-10-28T23:28:06.636Z","level":"info","msg":"Server running on http://localhost:3000/"}
+{"ts":"2026-10-28T23:28:07.863Z","level":"info","requestId":"ff5862b1-587a-4602-96fd-d87e71b4504c","msg":"request","method":"GET","path":"/api/trpc/auth.me","status":200,"durationMs":6}
+{"ts":"2026-10-28T23:28:09.583Z","level":"info","requestId":"d75eff10-7e01-4e35-8815-6daf729c3b08","msg":"request","method":"POST","path":"/api/trpc/trading.analyze","status":200,"durationMs":1156}
+{"ts":"2026-10-28T23:28:11.592Z","level":"info","requestId":"bd856b72-c745-40c6-9a6c-a1e3610eb4ec","msg":"request","method":"GET","path":"/api/trpc/auth.me","status":200,"durationMs":1}
+{"ts":"2026-10-28T23:28:12.830Z","level":"info","requestId":"7c3bb6d5-d542-43fc-85d2-ea2c9309b1f4","msg":"request","method":"POST","path":"/api/trpc/trading.analyze","status":200,"durationMs":688}

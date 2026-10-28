@@ -1,0 +1,82 @@
+{
+  "startedAt": "2026-10-28T23:28:07.644Z",
+  "runs": [
+    {
+      "symbol": "BTCUSDT",
+      "consoleErrors": [],
+      "analyze": {
+        "status": 200,
+        "error": null,
+        "source": "yahoo",
+        "marketType": "spot-index",
+        "candles": 298,
+        "firstTime": "2026-10-25T20:45:00.000Z",
+        "lastTime": "2026-10-28T23:00:00.000Z",
+        "lastClose": 81237.4609375,
+        "isFresh": true,
+        "dataQuality": {
+          "volumeZeroPct": 14,
+          "volumeReliable": true
+        },
+        "crossCheck": {
+          "status": "confirmed",
+          "referenceSource": "CoinGecko",
+          "alignedBars": 30,
+          "medianDeviationPct": 0.0294,
+          "maxDeviationPct": 0.0481,
+          "detail": "قیمت بسته‌شدن با CoinGecko هم‌خوانی دارد (میانهٔ اختلاف 0.029٪، بیشینه 0.048٪ روی 30 کندل)"
+        },
+        "warnings": [
+          "منبع داده شاخص تجمیعی اسپات (USD) است؛ قیمت قرارداد دائمی، Funding و Open Interest تأیید نشده‌اند"
+        ],
+        "signalStatus": "no-entry",
+        "verdicts": "approve,approve,reject,reject,reject,reject,reject,reject,reject,approve,approve,abstain,abstain,abstain,approve,approve,reject,approve,approve,reject"
+      },
+      "ui": {
+        "quote": "قیمت Close کندل بسته 81,237.46 ۰٫۰۷٪",
+        "sourceLine": "yahoo · آخرین کندل ۷ آبان، ۰۲:۳۰ · دریافت ۰ ثانیه پیش",
+        "signal": "تصمیم موتور سیگنال عدم ورود BTCUSDT yahoo عدم هم‌راستایی روند تایم‌فریم‌ها؛ عدم ورود جهت بدون ورود محدودهٔ ورود — حد ضرر — سود / زیان — شواهد موافق و مخالف مشاهدهٔ رأی هر ۲۰ نقش",
+        "chartCanvasCount": 15
+      }
+    },
+    {
+      "symbol": "ETHUSDT",
+      "consoleErrors": [],
+      "analyze": {
+        "status": 200,
+        "error": null,
+        "source": "yahoo",
+        "marketType": "spot-index",
+        "candles": 298,
+        "firstTime": "2026-10-25T20:45:00.000Z",
+        "lastTime": "2026-10-28T23:00:00.000Z",
+        "lastClose": 2359.330078125,
+        "isFresh": true,
+        "dataQuality": {
+          "volumeZeroPct": 18,
+          "volumeReliable": true
+        },
+        "crossCheck": {
+          "status": "confirmed",
+          "referenceSource": "CoinGecko",
+          "alignedBars": 30,
+          "medianDeviationPct": 0.0186,
+          "maxDeviationPct": 0.0721,
+          "detail": "قیمت بسته‌شدن با CoinGecko هم‌خوانی دارد (میانهٔ اختلاف 0.019٪، بیشینه 0.072٪ روی 30 کندل)"
+        },
+        "warnings": [
+          "منبع داده شاخص تجمیعی اسپات (USD) است؛ قیمت قرارداد دائمی، Funding و Open Interest تأیید نشده‌اند"
+        ],
+        "signalStatus": "no-entry",
+        "verdicts": "approve,approve,reject,reject,reject,reject,reject,reject,reject,approve,approve,abstain,abstain,abstain,approve,approve,reject,approve,reject,reject"
+      },
+      "ui": {
+        "quote": "قیمت Close کندل بسته 2,359.33 ۰٫۰۸٪",
+        "sourceLine": "yahoo · آخرین کندل ۷ آبان، ۰۲:۳۰ · دریافت ۰ ثانیه پیش",
+        "signal": "تصمیم موتور سیگنال عدم ورود ETHUSDT yahoo عدم هم‌راستایی روند تایم‌فریم‌ها؛ عدم ورود جهت بدون ورود محدودهٔ ورود — حد ضرر — سود / زیان — شواهد موافق و مخالف مشاهدهٔ رأی هر ۲۰ نقش",
+        "chartCanvasCount": 15
+      }
+    }
+  ],
+  "finishedAt": "2026-10-28T23:28:14.722Z"
+}
