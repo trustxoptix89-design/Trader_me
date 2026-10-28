@@ -409,3 +409,8 @@
 .chart-tabs button.on { background: rgba(34,211,238,.15); color: #22d3ee; }
 .chart-note { margin-top: .5rem; font-size: .72rem; color: var(--text-muted); }
 .market-chart { min-height: 0; }
+.tv-chart { width: 100%; height: 560px; }
+@media (max-width: 640px) { .tv-chart { height: 480px; } }
+.chart-tabs { display: flex; gap: .5rem; margin-bottom: .6rem; }
+.chart-tabs button { flex: 1; padding: .5rem .7rem; border-radius: .6rem; border: 1px solid var(--border, #2a3140); background: transparent; color: inherit; cursor: pointer; }
+.chart-tabs button[aria-pressed="true"] { background: var(--accent, #2563eb); border-color: transparent; color: #fff; }
