@@ -34,7 +34,7 @@ describe.skipIf(!enabled)("postgres schema, migrations and upserts", () => {
     const db = getDb();
     const userId = 900_000 + Math.floor(Math.random() * 90_000);
     try {
-      const w = { userId, symbol: "BTCUSDT", exchange: "binance" as const };
+      const w = { userId, symbol: "BTCUSDT", exchange: "yahoo" as const };
       await db.insert(schema.watchlist).values(w).onConflictDoUpdate({ target: [schema.watchlist.userId, schema.watchlist.symbol, schema.watchlist.exchange], set: { enabled: false } });
       await db.insert(schema.watchlist).values(w).onConflictDoUpdate({ target: [schema.watchlist.userId, schema.watchlist.symbol, schema.watchlist.exchange], set: { enabled: true } });
       const rows = await db.select().from(schema.watchlist).where(eq(schema.watchlist.userId, userId));
@@ -78,7 +78,7 @@ describe.skipIf(!enabled)("postgres schema, migrations and upserts", () => {
       expect(users[0].role).toBe("admin");
       const id = `probe-run-${randomUUID()}`;
       const result = { nested: { a: [1, 2, 3], b: "فارسی" } };
-      await db.insert(schema.analysisRuns).values({ id, userId: users[0].id, symbol: "BTCUSDT", exchange: "binance", status: "no-entry", result });
+      await db.insert(schema.analysisRuns).values({ id, userId: users[0].id, symbol: "BTCUSDT", exchange: "yahoo", status: "no-entry", result });
       const [run] = await db.select().from(schema.analysisRuns).where(and(eq(schema.analysisRuns.id, id)));
       expect(run.result).toEqual(result);
       expect(run.createdAt.getTime()).toBeGreaterThan(Date.now() - 60_000);

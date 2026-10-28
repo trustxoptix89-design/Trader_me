@@ -1,4 +1,6 @@
-export type Exchange = "binance" | "bybit";
+/** Independent market-data provider id. Historical field name `exchange` is kept for compatibility: the app never connects to exchanges. */
+export type DataSource = "yahoo";
+export type Exchange = DataSource;
 export type Interval = "1m" | "3m" | "5m" | "15m" | "30m" | "1h" | "4h" | "1d";
 export type Direction = "long" | "short";
 export type Verdict = "approve" | "reject" | "abstain";
@@ -46,6 +48,9 @@ export interface MarketSnapshot {
   isFresh: boolean;
   warnings: string[];
   crossCheck?: SourceCrossCheck;
+  /** "spot-index": aggregated spot index price (USD). Perpetual-contract price, funding and open interest are NOT covered. */
+  marketType?: "spot-index" | "futures";
+  dataQuality?: { volumeZeroPct: number; volumeReliable: boolean };
 }
 
 export interface MarketMetrics {

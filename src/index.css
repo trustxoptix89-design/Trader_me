@@ -414,3 +414,4 @@
 .chart-tabs { display: flex; gap: .5rem; margin-bottom: .6rem; }
 .chart-tabs button { flex: 1; padding: .5rem .7rem; border-radius: .6rem; border: 1px solid var(--border, #2a3140); background: transparent; color: inherit; cursor: pointer; }
 .chart-tabs button[aria-pressed="true"] { background: var(--accent, #2563eb); border-color: transparent; color: #fff; }
+.source-chip { display: inline-flex; align-items: center; min-height: 2.4rem; padding: 0 .8rem; border: 1px solid var(--border, #2a3140); border-radius: .6rem; font-size: .85rem; }

@@ -11,7 +11,7 @@ interface MarketContextValue {
 const MarketContext = createContext<MarketContextValue | null>(null);
 
 export function MarketProvider({ children }: { children: ReactNode }) {
-  const [exchange, setExchange] = useState<Exchange>("binance");
+  const [exchange, setExchange] = useState<Exchange>("yahoo");
   const [symbol, setSymbol] = useState("BTCUSDT");
   const [interval, setInterval] = useState<Interval>("15m");
   const [result, setResult] = useState<AnalysisResult | null>(null);

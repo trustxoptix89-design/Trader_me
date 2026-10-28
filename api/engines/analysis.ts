@@ -24,16 +24,16 @@ export async function analyzeMarket(options: {
   const target = riskDirection === "long" ? entry + atr * 3 : entry - atr * 3;
   const risk = assessRisk(options.riskSettings, riskDirection, entry, stop, target, metrics, {
     dailyPnl: options.dailyPnl, currentEquity: options.currentEquity, openRiskPct: options.openRiskPct,
-    correlatedPositions: options.correlatedPositions, dataComplete: snapshot.candles.length >= 200 && snapshot.derivatives.fundingRate !== null,
+    correlatedPositions: options.correlatedPositions, dataComplete: snapshot.candles.length >= 200 && (snapshot.marketType === "spot-index" || snapshot.derivatives.fundingRate !== null),
     abnormalMarket: !snapshot.isFresh || snapshot.crossCheck?.status === "divergent",
   });
   const macro = options.macro;
-  const strategy = snapshot.exchange === options.exchange ? options.strategy : { available: false, approved: false, details: ["صرافی جایگزین فعال شده و بک‌تست صرافی اولیه برای این بازار معتبر نیست"] };
+  const strategy = snapshot.exchange === options.exchange ? options.strategy : { available: false, approved: false, details: ["منبع داده جایگزین فعال شده و بک‌تست منبع اولیه برای این بازار معتبر نیست"] };
   const reviews = runCouncil(snapshot, metrics, { direction, risk, macro, strategy, correlatedPositions: options.correlatedPositions, maxCorrelatedPositions: options.riskSettings.maxCorrelatedPositions });
-  const allApproved = direction !== null && reviews.length === 20 && reviews.every((r) => r.verdict === "approve") && risk.approved && snapshot.isFresh && snapshot.crossCheck?.status !== "divergent";
+  const allApproved = direction !== null && reviews.length === 20 && reviews.every((r, i) => r.verdict === "approve" || (snapshot.marketType === "spot-index" && r.verdict === "abstain" && i >= 11 && i <= 13)) && risk.approved && snapshot.isFresh && snapshot.crossCheck?.status !== "divergent";
   const issuedAt = Date.now();
   const version = reviews[0]?.analysisVersion ?? randomUUID();
-  const failed = reviews.filter((r) => r.verdict !== "approve");
+  const failed = reviews.filter((r) => r.verdict === "reject");
   const signal = {
     id: randomUUID(), symbol: snapshot.symbol, exchange: snapshot.exchange, direction: allApproved ? direction : null,
     status: allApproved ? "approved" as const : "no-entry" as const,
@@ -45,7 +45,7 @@ export async function analyzeMarket(options: {
     estimatedFunding: allApproved && risk.notional !== null && snapshot.derivatives.fundingRate !== null ? risk.notional * snapshot.derivatives.fundingRate : null,
     evidenceFor: reviews.filter((r) => r.verdict === "approve").flatMap((r) => r.reasonsFor).slice(0, 12),
     evidenceAgainst: failed.flatMap((r) => r.reasonsAgainst).slice(0, 20), risk,
-    reasons: allApproved ? ["تأیید هر ۲۰ نقش، کنترل ریسک و اعتبار داده"] : direction === null ? ["عدم هم‌راستایی روند تایم‌فریم‌ها؛ عدم ورود"] : failed.map((r) => `${r.role}: ${r.reasonsAgainst.join("؛")}`),
+    reasons: allApproved ? [snapshot.marketType === "spot-index" ? "تأیید ۱۷ نقش قابل‌اجرا، کنترل ریسک و اعتبار داده؛ ۳ بررسی مشتقات (Mark/Funding/OI) برای منبع اسپات اجرا نشد" : "تأیید هر ۲۰ نقش، کنترل ریسک و اعتبار داده"] : direction === null ? ["عدم هم‌راستایی روند تایم‌فریم‌ها؛ عدم ورود"] : failed.map((r) => `${r.role}: ${r.reasonsAgainst.join("؛")}`),
     analysisVersion: version,
   };
   return { snapshot, metrics, reviews, signal, macro, strategy };

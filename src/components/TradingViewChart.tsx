@@ -7,7 +7,7 @@ const TV_INTERVAL: Record<Interval, string> = { "1m": "1", "3m": "3", "5m": "5",
  * Free TradingView Advanced Chart widget: full drawing tools and indicators for any symbol.
  * Display only — it needs no exchange account and the app never trades.
  */
-export function TradingViewChart({ symbol, interval, exchange }: { symbol: string; interval: Interval; exchange: "binance" | "bybit" }) {
+export function TradingViewChart({ symbol, interval }: { symbol: string; interval: Interval }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = host.current;
@@ -22,7 +22,7 @@ export function TradingViewChart({ symbol, interval, exchange }: { symbol: strin
     script.async = true;
     script.innerHTML = JSON.stringify({
       autosize: true,
-      symbol: `${exchange === "bybit" ? "BYBIT" : "BINANCE"}:${symbol}.P`,
+      symbol: `CRYPTO:${symbol.replace(/USDT$/, "USD")}`,
       interval: TV_INTERVAL[interval],
       timezone: "Asia/Tehran",
       theme: "dark",
@@ -36,6 +36,6 @@ export function TradingViewChart({ symbol, interval, exchange }: { symbol: strin
     });
     el.appendChild(script);
     return () => { el.innerHTML = ""; };
-  }, [symbol, interval, exchange]);
+  }, [symbol, interval]);
   return <div ref={host} className="tradingview-widget-container tv-chart" dir="ltr" aria-label={`چارت TradingView ${symbol}`} />;
 }

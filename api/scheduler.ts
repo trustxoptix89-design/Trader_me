@@ -2,7 +2,7 @@ import webpush from "web-push";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb } from "./queries/connection";
 import { alerts, notifications, paperTrades, pushSubscriptions, schedulerState, systemEvents } from "@db/schema";
-import { fetchDerivatives } from "./connectors/market";
+import { fetchLatestPrice } from "./connectors/market";
 import { macroAssessment } from "./connectors/news";
 import { analyzeMarket } from "./engines/analysis";
 import { getRisk, strategyContext, userRiskContext } from "./trading-router";
@@ -37,9 +37,8 @@ export async function runScheduler(): Promise<{ ok: boolean; alertsChecked: numb
     for (const alert of activeAlerts) {
       checked++;
       try {
-        const derivatives = await fetchDerivatives(alert.exchange, alert.symbol);
-        const price = derivatives.markPrice;
-        if (price === null || !Number.isFinite(price)) throw new Error("Mark Price نامعتبر است");
+        const price = await fetchLatestPrice(alert.exchange, alert.symbol);
+        if (!Number.isFinite(price)) throw new Error("قیمت نامعتبر است");
         let triggered = false, title = "", body = "";
         if (alert.kind === "price-above" && alert.threshold && price >= alert.threshold && (alert.lastValue === null || alert.lastValue < alert.threshold)) {
           triggered = true; title = `${alert.symbol} بالای آستانه`; body = `قیمت واقعی ${alert.exchange}: ${price}؛ آستانه: ${alert.threshold}`;
@@ -70,7 +69,7 @@ export async function runScheduler(): Promise<{ ok: boolean; alertsChecked: numb
     const openTrades = await db.select().from(paperTrades).where(eq(paperTrades.status, "open"));
     for (const trade of openTrades) {
       try {
-        const d = await fetchDerivatives(trade.exchange, trade.symbol), price = d.markPrice;
+        const price = await fetchLatestPrice(trade.exchange, trade.symbol);
         if (!price) continue;
         const sign = trade.side === "long" ? 1 : -1;
         const reason = sign === 1 ? (price <= trade.stop ? "حد ضرر" : price >= trade.target ? "هدف" : "") : (price >= trade.stop ? "حد ضرر" : price <= trade.target ? "هدف" : "");

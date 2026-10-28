@@ -27,7 +27,7 @@ export default function Dashboard() {
         </div>
         {chartMode === "signal"
           ? <MarketChart candles={result.snapshot.candles} higher={result.snapshot.higherTimeframes["4h"]} interval={result.snapshot.interval} signal={result.signal} />
-          : <TradingViewChart symbol={result.snapshot.symbol} interval={result.snapshot.interval} exchange={result.snapshot.exchange} />}
+          : <TradingViewChart symbol={result.snapshot.symbol} interval={result.snapshot.interval} />}
         <div className="source-line"><Database size={14} /><span>{result.snapshot.exchange} · آخرین کندل {dateTime(result.snapshot.candles.at(-1)?.time)} · دریافت {age(result.snapshot.fetchedAt)}</span></div>
       </Panel>
       <Panel className="signal-panel" title="تصمیم موتور سیگنال"><SignalCard signal={result.signal} /></Panel>

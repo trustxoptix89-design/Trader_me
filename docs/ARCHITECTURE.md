@@ -23,7 +23,7 @@
 
 ## مرزهای ماژول
 
-- `api/connectors/market.ts`: Binance/Bybit، OHLCV، mark/index price، Funding، OI، health و Funding history. هیچ دادهٔ جایگزین ساختگی ندارد.
+- `api/connectors/market.ts` + `providers/`: منبع مستقل Yahoo Finance برای OHLCV (شاخص اسپات USD، بدون اتصال به صرافی) و CoinGecko فقط برای تأیید قیمت. Funding/OI/Mark در دسترس نیست و گزارش می‌شود؛ نقش‌های ۱۱ تا ۱۳ در حالت اسپات اجرا نمی‌شوند. هیچ دادهٔ جایگزین ساختگی یا کهنه نمایش داده نمی‌شود.
 - `api/connectors/news.ts`: RSS و تقویم BLS ICS؛ ناپدسترسی به‌صورت unavailable و ریسک‌ممنوع گزارش می‌شود.
 - `api/engines/indicators.ts`: شاخص‌ها و متریک‌ها.
 - `api/engines/council.ts`: ۱۰ observer + ۱۰ expert و نسخهٔ SHA-256 تحلیل.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Candle } from "@contracts/types";
-import { compareFeeds, crossCheckFeed, normalizeCoinbase, normalizeOkx, type ReferenceSource } from "./reference";
+import { compareFeeds, crossCheckFeed, type ReferenceSource } from "./reference";
+import { coinGeckoId, normalizeCoinGeckoOhlc } from "./providers/coingecko";
 
 const H = 3_600_000;
 const mk = (n: number, f: (i: number) => number, start = 0): Candle[] =>
@@ -41,11 +42,11 @@ describe("cross-source validation", () => {
     expect(none.detail).toContain("HTTP 403");
   });
 
-  it("normalizes OKX (confirmed bars only, ascending) and Coinbase payloads", () => {
-    const okx = normalizeOkx([["2000", "1", "2", "0.5", "1.5", "9", "", "", "1"], ["3000", "1", "2", "0.5", "1.6", "9", "", "", "0"], ["1000", "1", "2", "0.5", "1.2", "9", "", "", "1"]], "1m");
-    expect(okx.map((c) => c.time)).toEqual([1000, 2000]);
-    const cb = normalizeCoinbase([[120, 1, 3, 2, 2.5, 7], [60, 1, 3, 2, 2.2, 7]], "1m");
-    expect(cb.map((c) => c.time)).toEqual([60_000, 120_000]);
-    expect(cb[0]).toMatchObject({ open: 2, high: 3, low: 1, close: 2.2 });
+  it("normalizes CoinGecko rows: the timestamp is the END of the 30-minute bar", () => {
+    const c = normalizeCoinGeckoOhlc([[1793212200000, 80808, 81010, 80649, 80850], [1793210400000, 80508, 80860, 80508, 80808]]);
+    expect(c.map((x) => x.time)).toEqual([1793208600000, 1793210400000]);
+    expect(c[1]).toMatchObject({ open: 80808, close: 80850, closeTime: 1793212199999 });
+    expect(coinGeckoId("BTCUSDT")).toBe("bitcoin");
+    expect(coinGeckoId("NOPEUSDT")).toBeNull();
   });
 });
