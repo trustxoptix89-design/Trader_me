@@ -19,5 +19,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // Dev hot-reload hint only (shadcn/ui and providers export helpers next to components); not a correctness rule.
+      'react-refresh/only-export-components': 'warn',
+    },
   },
 ])
