@@ -23,6 +23,17 @@ export interface DerivativesSnapshot {
   openInterestChangePct: number | null;
 }
 
+export type CrossCheckStatus = "confirmed" | "warning" | "divergent" | "insufficient" | "unavailable";
+
+export interface SourceCrossCheck {
+  status: CrossCheckStatus;
+  referenceSource: string | null;
+  alignedBars: number;
+  medianDeviationPct: number | null;
+  maxDeviationPct: number | null;
+  detail: string;
+}
+
 export interface MarketSnapshot {
   exchange: Exchange;
   symbol: string;
@@ -34,6 +45,7 @@ export interface MarketSnapshot {
   sourceServerTime: number | null;
   isFresh: boolean;
   warnings: string[];
+  crossCheck?: SourceCrossCheck;
 }
 
 export interface MarketMetrics {

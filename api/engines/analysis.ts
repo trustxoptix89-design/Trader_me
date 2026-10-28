@@ -25,12 +25,12 @@ export async function analyzeMarket(options: {
   const risk = assessRisk(options.riskSettings, riskDirection, entry, stop, target, metrics, {
     dailyPnl: options.dailyPnl, currentEquity: options.currentEquity, openRiskPct: options.openRiskPct,
     correlatedPositions: options.correlatedPositions, dataComplete: snapshot.candles.length >= 200 && snapshot.derivatives.fundingRate !== null,
-    abnormalMarket: !snapshot.isFresh,
+    abnormalMarket: !snapshot.isFresh || snapshot.crossCheck?.status === "divergent",
   });
   const macro = options.macro;
   const strategy = snapshot.exchange === options.exchange ? options.strategy : { available: false, approved: false, details: ["صرافی جایگزین فعال شده و بک‌تست صرافی اولیه برای این بازار معتبر نیست"] };
   const reviews = runCouncil(snapshot, metrics, { direction, risk, macro, strategy, correlatedPositions: options.correlatedPositions, maxCorrelatedPositions: options.riskSettings.maxCorrelatedPositions });
-  const allApproved = direction !== null && reviews.length === 20 && reviews.every((r) => r.verdict === "approve") && risk.approved && snapshot.isFresh;
+  const allApproved = direction !== null && reviews.length === 20 && reviews.every((r) => r.verdict === "approve") && risk.approved && snapshot.isFresh && snapshot.crossCheck?.status !== "divergent";
   const issuedAt = Date.now();
   const version = reviews[0]?.analysisVersion ?? randomUUID();
   const failed = reviews.filter((r) => r.verdict !== "approve");
