@@ -1,0 +1,18 @@
+name: Probe data sources
+# Reports which public market-data APIs are reachable from the runner network (real HTTP results, not assumptions).
+on:
+  workflow_dispatch:
+  push:
+    branches: ["feat/probe-**", "feat/probe-and-deploy"]
+    paths: ["scripts/probe-sources.mjs", ".github/workflows/probe-sources.yml"]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: Probe
+        run: |
+          node scripts/probe-sources.mjs | tee probe.txt
+          echo "::notice title=probe-result::$(sed ':a;N;$!ba;s/\n/%0A/g' probe.txt)"
