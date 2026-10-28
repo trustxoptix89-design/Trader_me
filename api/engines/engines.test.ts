@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_RISK, type Candle, type MarketMetrics, type MarketSnapshot } from "@contracts/types";
-import { atrSeries, emaSeries, rsiSeries, sma } from "./indicators";
+import { atrSeries, emaSeries, macdSeries, rsiSeries, sma, swingLevels, vwapSeries } from "./indicators";
 import { assessRisk, calculatePosition } from "./risk";
 import { runCouncil } from "./council";
 import { buyAndHold, classifyRobustness, runBacktest, STRATEGY_VERSION, wilson95 } from "./backtest";
@@ -197,5 +197,46 @@ describe("backtest reporting integrity", () => {
     expect(classifyRobustness(30, 500, true)).toBe("robust");
     expect(classifyRobustness(30, 500, false)).toBe("conditional");
     expect(classifyRobustness(30, -1, true)).toBe("fragile");
+  });
+});
+
+describe("shared chart indicators (same code as the analysis engine)", () => {
+  it("MACD is aligned to the input, zero on a flat series, and histogram = macd - signal", () => {
+    const flat = macdSeries(Array(60).fill(100));
+    expect(flat.macd).toHaveLength(60);
+    expect(flat.macd[24]).toBeNull();
+    expect(flat.macd[25]).toBe(0);
+    expect(flat.signal[32]).toBe(0);
+    expect(flat.signal[31]).toBeNull();
+    const rising = macdSeries(Array.from({ length: 80 }, (_, i) => 100 + i));
+    const i = 79;
+    expect(rising.macd[i]!).toBeGreaterThan(0);
+    expect(rising.histogram[i]!).toBeCloseTo(rising.macd[i]! - rising.signal[i]!, 12);
+  });
+
+  it("VWAP: volume-weighted typical price, resetting at each UTC day", () => {
+    const day = 86_400_000;
+    const a = candleAt(0, { time: 10 * day, high: 12, low: 8, close: 10, volume: 1 });       // tp 10
+    const b = candleAt(1, { time: 10 * day + 900_000, high: 24, low: 16, close: 20, volume: 3 }); // tp 20
+    const c = candleAt(2, { time: 11 * day, high: 31, low: 29, close: 30, volume: 5 });      // new day, tp 30
+    const v = vwapSeries([a, b, c]);
+    expect(v[0]).toBe(10);
+    expect(v[1]).toBeCloseTo((10 * 1 + 20 * 3) / 4, 12);
+    expect(v[2]).toBe(30);
+    expect(vwapSeries([candleAt(0, { volume: 0 })])[0]).toBeNull();
+  });
+
+  it("swing levels use only confirmed pivots and split around the last close", () => {
+    const highs = [10, 11, 12, 20, 12, 11, 10, 11, 12, 13, 12, 11, 10, 9, 9];
+    const candles = highs.map((h, i) => candleAt(i, { high: h, low: h - 2, close: h - 1 }));
+    candles[candles.length - 1] = candleAt(14, { high: 9, low: 7, close: 8 });
+    const levels = swingLevels(candles, 3, 3, 2);
+    expect(levels.resistance).toContain(20);
+    expect(levels.resistance).toContain(13);
+    expect(levels.resistance[0]).toBe(13);
+    // a bar inside the last 3 cannot be a confirmed pivot
+    const unconfirmed = [...candles.slice(0, 14), candleAt(14, { high: 99, low: 7, close: 8 })];
+    expect(swingLevels(unconfirmed, 3, 3, 2).resistance).not.toContain(99);
+    expect(swingLevels([], 3, 3, 2)).toEqual({ support: [], resistance: [] });
   });
 });

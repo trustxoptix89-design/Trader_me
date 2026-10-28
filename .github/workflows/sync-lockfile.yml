@@ -1,0 +1,25 @@
+name: Sync lockfile
+# Keeps package-lock.json in step with package.json when dependencies change (needed where npm cannot be run locally).
+on:
+  push:
+    branches: ["feat/**"]
+    paths: ["package.json"]
+permissions:
+  contents: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update lockfile only if out of sync
+        run: |
+          if npm ci --dry-run >/dev/null 2>&1; then echo "lockfile already in sync"; exit 0; fi
+          npm install --package-lock-only --ignore-scripts
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: sync package-lock.json with package.json"
+          git push
