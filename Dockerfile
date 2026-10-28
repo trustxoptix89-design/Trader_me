@@ -10,6 +10,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/db/migrations ./db/migrations
 COPY package.json ./
 USER node
 EXPOSE 3000
