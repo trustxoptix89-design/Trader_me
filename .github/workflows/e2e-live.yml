@@ -23,7 +23,6 @@ jobs:
       SESSION_SECRET: e2e-session-secret-0123456789abcdef0123456789abcdef
       CRON_SECRET: e2e-cron-secret-0123456789abcdef
       DISABLE_SCHEDULER: "true"
-      NODE_ENV: production
       PORT: "3000"
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +33,7 @@ jobs:
       - run: npm install --no-save playwright@1.49.1 && npx playwright install --with-deps chromium
       - name: Start server
         run: |
-          nohup node dist/boot.js > server.log 2>&1 &
+          NODE_ENV=production nohup node dist/boot.js > server.log 2>&1 &
           for i in $(seq 1 40); do curl -sf http://localhost:3000/ >/dev/null && break; sleep 1; done
           curl -sf http://localhost:3000/ >/dev/null || (cat server.log; exit 1)
       - name: Live browser proof
