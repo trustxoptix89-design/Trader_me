@@ -13,7 +13,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint -- --quiet
+      - name: Lint (errors only)
+        run: |
+          npm run lint -- --quiet > lint.txt 2>&1 || {
+            echo "::error title=lint-output::$(head -c 3000 lint.txt | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          }
       - run: npm run check
       - run: npm test
       - run: npm run build
