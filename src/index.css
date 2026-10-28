@@ -399,3 +399,13 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Market chart toolbar */
+.chart-toolbar { display: flex; flex-wrap: wrap; gap: .5rem .9rem; align-items: center; margin-bottom: .5rem; font-size: .8rem; color: var(--text-muted); }
+.chart-toggle { display: inline-flex; align-items: center; gap: .35rem; cursor: pointer; min-height: 32px; }
+.chart-toggle input { accent-color: #22d3ee; width: 16px; height: 16px; }
+.chart-tabs { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.chart-tabs button { background: transparent; color: var(--text-muted); border: 0; padding: .35rem .8rem; min-height: 32px; cursor: pointer; font: inherit; }
+.chart-tabs button.on { background: rgba(34,211,238,.15); color: #22d3ee; }
+.chart-note { margin-top: .5rem; font-size: .72rem; color: var(--text-muted); }
+.market-chart { min-height: 0; }

@@ -18,7 +18,7 @@ export default function Dashboard() {
     {result && <div className="dashboard-grid">
       <Panel className="market-panel" title={`${result.snapshot.symbol} / ${result.snapshot.interval}`} action={<StatusBadge tone={result.snapshot.isFresh ? "good" : "bad"}>{result.snapshot.isFresh ? "تازه" : "کهنه"}</StatusBadge>}>
         <div className="quote-row"><div><span>قیمت Close کندل بسته</span><strong dir="ltr">{price(result.metrics.price)}</strong></div><span className={Number(result.metrics.priceChangePct) >= 0 ? "positive" : "negative"}>{pct(result.metrics.priceChangePct)}</span></div>
-        <MarketChart candles={result.snapshot.candles} />
+        <MarketChart candles={result.snapshot.candles} higher={result.snapshot.higherTimeframes["4h"]} interval={result.snapshot.interval} signal={result.signal} />
         <div className="source-line"><Database size={14} /><span>{result.snapshot.exchange} · آخرین کندل {dateTime(result.snapshot.candles.at(-1)?.time)} · دریافت {age(result.snapshot.fetchedAt)}</span></div>
       </Panel>
       <Panel className="signal-panel" title="تصمیم موتور سیگنال"><SignalCard signal={result.signal} /></Panel>
