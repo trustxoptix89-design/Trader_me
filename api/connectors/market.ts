@@ -1,3 +1,4 @@
+import { crossCheckFeed } from "./reference";
 import type { Candle, DerivativesSnapshot, Exchange, Interval, MarketSnapshot } from "@contracts/types";
 
 const TIMEOUT_MS = 12_000;
@@ -96,8 +97,11 @@ export async function fetchSnapshot(exchange: Exchange, symbol: string, interval
   const warnings: string[] = [];
   if (age > intervalMs * 2.5) warnings.push("آخرین کندل از آستانهٔ تازگی عبور کرده است");
   if (derivatives.openInterestChangePct === null) warnings.push("تغییرات Open Interest در دسترس نیست");
+  const crossCheck = await crossCheckFeed(candles, symbol, interval);
+  if (crossCheck.status === "warning" || crossCheck.status === "divergent") warnings.push(crossCheck.detail);
+  if (crossCheck.status === "unavailable" || crossCheck.status === "insufficient") warnings.push("تأیید مستقل داده از منبع دوم انجام نشد؛ این تحلیل فقط به یک صرافی متکی است");
   return {
-    exchange, symbol, interval, candles,
+    exchange, symbol, interval, candles, crossCheck,
     higherTimeframes: { ...(oneHour.length ? { "1h": oneHour } : {}), ...(fourHour.length ? { "4h": fourHour } : {}) },
     derivatives, fetchedAt: Date.now(), sourceServerTime: last.closeTime,
     isFresh: age <= intervalMs * 2.5, warnings,
