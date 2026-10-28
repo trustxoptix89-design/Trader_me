@@ -19,7 +19,7 @@ describe.skipIf(!enabled)("postgres schema, migrations and upserts", () => {
 
   it("every Drizzle table and column exists in the migrated database with matching names", async () => {
     const db = getDb();
-    const tables = Object.values(schema).filter((v): v is PgTable => is(v, PgTable));
+    const tables = Object.values(schema).filter((v) => is(v, PgTable)) as unknown as PgTable[];
     expect(tables.length).toBeGreaterThanOrEqual(12);
     for (const table of tables) {
       const cfg = getTableConfig(table);

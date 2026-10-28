@@ -1,5 +1,5 @@
 import {
-  pgSchema, serial, varchar, text, timestamp, integer,
+  pgSchema, serial, varchar, text, timestamp, bigint, integer,
   doublePrecision, boolean, jsonb, uniqueIndex, index,
 } from "drizzle-orm/pg-core";
 
@@ -28,7 +28,7 @@ export const users = sarmaye.table("users", {
   lastSignInAt: ts("lastSignInAt").defaultNow().notNull(),
 });
 
-const userId = () => biginteger("userId", { mode: "number" }).notNull();
+const userId = () => bigint("userId", { mode: "number" }).notNull();
 
 export const riskSettings = sarmaye.table("risk_settings", {
   id: serial("id").primaryKey(), userId: userId().notNull().unique(),
@@ -54,7 +54,7 @@ export const watchlist = sarmaye.table("watchlist", {
 }, (t) => ({ uniqueAsset: uniqueIndex("watchlist_unique").on(t.userId, t.symbol, t.exchange) }));
 
 export const analysisRuns = sarmaye.table("analysis_runs", {
-  id: varchar("id", { length: 64 }).primaryKey(), userId: biginteger("userId", { mode: "number" }),
+  id: varchar("id", { length: 64 }).primaryKey(), userId: bigint("userId", { mode: "number" }),
   symbol: varchar("symbol", { length: 24 }).notNull(),
   exchange: exchangeEnum("exchange").notNull(),
   status: analysisStatusEnum("status").notNull(),
@@ -104,7 +104,7 @@ export const alerts = sarmaye.table("alerts", {
 
 export const notifications = sarmaye.table("notifications", {
   id: serial("id").primaryKey(), userId: userId().notNull(),
-  alertId: biginteger("alertId", { mode: "number" }),
+  alertId: bigint("alertId", { mode: "number" }),
   kind: varchar("kind", { length: 32 }).notNull(), title: varchar("title", { length: 255 }).notNull(),
   body: text("body").notNull(), dedupeKey: varchar("dedupeKey", { length: 255 }).notNull().unique(),
   read: boolean("read").notNull().default(false), createdAt: ts("createdAt").defaultNow().notNull(),
