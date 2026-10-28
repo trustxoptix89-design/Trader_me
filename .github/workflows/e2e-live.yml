@@ -1,5 +1,9 @@
 name: e2e-live
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/e2e-live-proof]
+    paths: ['e2e/**', '.github/workflows/e2e-live.yml']
 permissions:
   contents: write
 jobs:
