@@ -22,6 +22,13 @@ export default defineConfig([
     rules: {
       // Dev hot-reload hint only (shadcn/ui and providers export helpers next to components); not a correctness rule.
       'react-refresh/only-export-components': 'warn',
+      // React Compiler advisory rules (eslint-plugin-react-hooks v7): performance hints, not correctness errors.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/refs': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
     },
   },
 ])
