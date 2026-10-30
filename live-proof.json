@@ -1,0 +1,105 @@
+{
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "startedAt": "2026-10-30T10:54:39.410Z",
+  "migrationsApplied": [],
+  "sourceProbe": [
+    {
+      "source": "coingecko",
+      "ok": true,
+      "httpStatus": 200,
+      "candles": 24,
+      "alignedToTimeframe": 24,
+      "ms": 102
+    },
+    {
+      "source": "cryptocompare",
+      "ok": false,
+      "httpStatus": 401,
+      "error": "HTTP 401",
+      "ms": 57
+    },
+    {
+      "source": "binance",
+      "ok": true,
+      "httpStatus": 200,
+      "candles": 200,
+      "alignedToTimeframe": 200,
+      "ms": 747
+    },
+    {
+      "source": "yahoo",
+      "ok": true,
+      "httpStatus": 200,
+      "candles": 200,
+      "alignedToTimeframe": 200,
+      "ms": 119
+    }
+  ],
+  "run1": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "source": "coingecko",
+    "httpStatus": 200,
+    "rawSample": [
+      1793271600000,
+      80054,
+      80272,
+      80053,
+      80198
+    ],
+    "fetched": 24,
+    "valid": 24,
+    "rejected": 0,
+    "rejectedSample": [],
+    "duplicatesInPayload": 0,
+    "inserted": 24,
+    "alreadyStored": 0,
+    "gaps": 0,
+    "gapsInserted": 0,
+    "lastOpenTime": 1793354400000,
+    "freshnessMs": 3280497,
+    "stale": false,
+    "attempts": [
+      {
+        "source": "coingecko",
+        "ok": true,
+        "httpStatus": 200,
+        "code": "OK",
+        "message": "24 valid candles",
+        "retried": false
+      }
+    ],
+    "rowsBefore": 0,
+    "rowsAfter": 24
+  },
+  "reinsertSameRows": {
+    "attempted": 24,
+    "inserted": 0,
+    "rowsAfter": 24
+  },
+  "run2": {
+    "source": "coingecko",
+    "httpStatus": 200,
+    "valid": 24,
+    "inserted": 0,
+    "alreadyStored": 24,
+    "rowsAfter": 24,
+    "rowsAddedEqualsInserted": true
+  },
+  "latestStoredRow": {
+    "id": 62,
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "openTime": 1793354400000,
+    "open": 77604,
+    "high": 77604,
+    "low": 77303,
+    "close": 77327,
+    "volume": 0,
+    "source": "coingecko",
+    "ingestedAt": "2026-10-30T10:54:40.495Z"
+  },
+  "ok": true,
+  "finishedAt": "2026-10-30T10:54:40.525Z"
+}

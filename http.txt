@@ -1,0 +1,58 @@
+BTCUSDT 1h -> HTTP 200
+ETHUSDT 15m -> HTTP 200
+{
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "count": 24,
+  "stale": false,
+  "freshness_ms": 3287441,
+  "source_active": "coingecko",
+  "refreshed": false,
+  "refresh_error": null,
+  "first": {
+    "open_time": 1793271600000,
+    "open": 80203,
+    "high": 80217,
+    "low": 80043,
+    "close": 80084,
+    "volume": 0,
+    "source": "coingecko"
+  },
+  "last": {
+    "open_time": 1793354400000,
+    "open": 77604,
+    "high": 77604,
+    "low": 77303,
+    "close": 77327,
+    "volume": 0,
+    "source": "coingecko"
+  }
+}
+{
+  "symbol": "ETHUSDT",
+  "timeframe": "15m",
+  "count": 200,
+  "stale": false,
+  "freshness_ms": 588238,
+  "source_active": "binance",
+  "refreshed": true,
+  "refresh_error": null,
+  "first": {
+    "open_time": 1793178000000,
+    "open": 2372.28,
+    "high": 2372.64,
+    "low": 2368.64,
+    "close": 2370.54,
+    "volume": 1972.9705,
+    "source": "binance"
+  },
+  "last": {
+    "open_time": 1793357100000,
+    "open": 2245.71,
+    "high": 2247.52,
+    "low": 2241.35,
+    "close": 2247.52,
+    "volume": 1631.0894,
+    "source": "binance"
+  }
+}

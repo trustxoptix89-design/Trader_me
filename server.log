@@ -1,0 +1,22 @@
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P06',
+  message: 'schema "sarmaye" already exists, skipping',
+  file: 'schemacmds.c',
+  line: '132',
+  routine: 'CreateSchemaCommand'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "schema_migrations" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{"ts":"2026-10-30T10:54:46.557Z","level":"info","msg":"Server running on http://localhost:3000/"}
+{"ts":"2026-10-30T10:54:47.421Z","level":"info","requestId":"e91f943e-63b9-4e03-bd5b-f8b98cb62f10","msg":"request","method":"GET","path":"/api/jobs/status","status":200,"durationMs":2}
+{"ts":"2026-10-30T10:54:47.442Z","level":"info","requestId":"1e47557e-9b38-4ea4-8f80-5fc7b2227125","msg":"request","method":"GET","path":"/api/candles","status":200,"durationMs":10}
+{"ts":"2026-10-30T10:54:48.239Z","level":"info","requestId":"476347b6-1b72-4197-95fa-7528d0371385","msg":"request","method":"GET","path":"/api/candles","status":200,"durationMs":789}
