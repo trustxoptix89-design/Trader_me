@@ -15,12 +15,12 @@ export class IngestHttpError extends Error {
 
 export const REQUEST_TIMEOUT_MS = 5_000;
 
-export async function getJson(url: string, source: string, fetchImpl: FetchLike = fetch, timeoutMs = REQUEST_TIMEOUT_MS): Promise<{ status: number; body: unknown }> {
+export async function getJson(url: string, source: string, fetchImpl: FetchLike = fetch, timeoutMs = REQUEST_TIMEOUT_MS, extraHeaders: Record<string, string> = {}): Promise<{ status: number; body: unknown }> {
   let response: Response;
   try {
     response = await fetchImpl(url, {
       signal: AbortSignal.timeout(timeoutMs),
-      headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; Sarmaye/1.0; market-data-reader)" },
+      headers: { accept: "application/json", "user-agent": "Mozilla/5.0 (compatible; Sarmaye/1.0; market-data-reader)", ...extraHeaders },
     });
   } catch (error) {
     throw new IngestHttpError(source, null, `network error: ${error instanceof Error ? error.message : String(error)}`);

@@ -35,10 +35,10 @@ export const baseAsset = (symbol: string) => symbol.replace(/USDT$/, "");
 const bar = (time: number, tfMs: number, o: number, h: number, l: number, c: number, v: number): Candle => ({ time, closeTime: time + tfMs - 1, open: o, high: h, low: l, close: c, volume: v });
 const bad = (source: string, status: number, what: string) => new IngestHttpError(source, status, `unexpected payload: ${what}`);
 
-/** 1) CoinGecko /coins/{id}/ohlc. Free granularity: days<=2 → 30m, days 3..30 → 4h. No volume (stored as 0). Timestamps are bar END times. */
+/** 1) CoinGecko /coins/{id}/ohlc. `days` must be one of 1/7/14/30/90/180/365/max (others answer HTTP 400). Free granularity: days 1-2 → 30m, days 3-30 → 4h. No volume (stored as 0). Timestamps are bar END times. */
 const CG_PLAN: Partial<Record<Timeframe, { days: number; nativeMs: number; resampleTo?: number }>> = {
-  "30m": { days: 2, nativeMs: TF_MS["30m"] },
-  "1h": { days: 2, nativeMs: TF_MS["30m"], resampleTo: TF_MS["1h"] },
+  "30m": { days: 1, nativeMs: TF_MS["30m"] },
+  "1h": { days: 1, nativeMs: TF_MS["30m"], resampleTo: TF_MS["1h"] },
   "4h": { days: 30, nativeMs: TF_MS["4h"] },
 };
 
@@ -71,7 +71,9 @@ export const cryptocompare: Provider = {
   async fetch(symbol, timeframe, limit, fetchImpl) {
     const plan = CC_PLAN[timeframe];
     const url = `https://min-api.cryptocompare.com/data/v2/${plan.path}?fsym=${baseAsset(symbol)}&tsym=USD&limit=${limit}&aggregate=${plan.aggregate}`;
-    const { status, body } = await getJson(url, "cryptocompare", fetchImpl);
+    // CryptoCompare now answers 401 without a (free) key; the key is optional and read from the environment only.
+    const key = process.env.CRYPTOCOMPARE_API_KEY;
+    const { status, body } = await getJson(url, "cryptocompare", fetchImpl, undefined, key ? { authorization: `Apikey ${key}` } : {});
     const b = body as { Response?: string; Message?: string; Data?: { Data?: Record<string, number>[] } };
     if (b?.Response === "Error") {
       const rate = /rate limit/i.test(b.Message ?? "");
@@ -131,6 +133,8 @@ export const yahoo: Provider = {
       throw bad("yahoo", status, error instanceof Error ? error.message : String(error));
     }
     if (plan.resampleTo) candles = resample(candles, plan.resampleTo);
+    // Yahoo reports the still-forming bar with the quote time instead of the bar start; keep only bars on the timeframe grid.
+    if (timeframe !== "1d") candles = candles.filter((c) => c.time % TF_MS[timeframe] === 0);
     const result = (body as { chart?: { result?: { timestamp?: number[]; indicators?: { quote?: Record<string, unknown[]>[] } }[] } }).chart?.result?.[0];
     const q = result?.indicators?.quote?.[0];
     const rawSample = result?.timestamp?.length ? { timestamp: result.timestamp[0], open: q?.open?.[0], high: q?.high?.[0], low: q?.low?.[0], close: q?.close?.[0], volume: q?.volume?.[0] } : null;

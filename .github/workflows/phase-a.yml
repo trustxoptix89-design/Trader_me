@@ -36,12 +36,16 @@ jobs:
       - run: mkdir -p evidence
 
       - name: Typecheck
-        run: npm run check
+        run: |
+          npm run check > evidence/tsc.txt 2>&1 || { echo "::error title=tsc::$(head -c 3500 evidence/tsc.txt | sed ':a;N;$!ba;s/\n/%0A/g')"; exit 1; }
 
       - name: Lint (errors only)
-        run: npm run lint -- --quiet
+        if: ${{ !cancelled() }}
+        run: |
+          npm run lint -- --quiet > evidence/lint.txt 2>&1 || { echo "::error title=lint::$(head -c 3500 evidence/lint.txt | sed ':a;N;$!ba;s/\n/%0A/g')"; exit 1; }
 
       - name: Tests (unit + Postgres integration)
+        if: ${{ !cancelled() }}
         run: npx vitest run --reporter=verbose 2>&1 | tee evidence/tests.txt
 
       - name: Live cascade ingest into Postgres (real network, no mocks)
