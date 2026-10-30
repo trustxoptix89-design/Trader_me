@@ -197,6 +197,14 @@ describe("providers parse real response shapes (mocked fetch)", () => {
   });
 });
 
+/** Shape of the /api/candles JSON body. Response.json() is `unknown` under the Node typings, so tests read it through this type. */
+interface CandlesBody {
+  error?: string; symbol?: string; timeframe?: string; count: number; stale: boolean; freshness_ms: number | null;
+  source_active: string; refreshed: boolean; refresh_error: { code: string; attempts: { source: string; httpStatus: number | null; code: string }[] } | null;
+  candles: { open_time: number; open: number }[];
+}
+const readBody = async (res: Response): Promise<CandlesBody> => (await res.json()) as CandlesBody;
+
 describe("GET /api/candles and POST /api/ingest", () => {
   const BASE = T0 + 10 * H;
   const mk = async (rows = 10, now = BASE) => {
@@ -210,7 +218,7 @@ describe("GET /api/candles and POST /api/ingest", () => {
     const ingestFn = vi.fn();
     const app = candlesRoutes({ store, ingestFn, now: () => T0 + 9 * H + 600_000 });
     const res = await app.request("/?symbol=BTCUSDT&timeframe=1h&limit=200");
-    const body = await res.json();
+    const body = await readBody(res);
     expect(res.status).toBe(200);
     expect(body).toMatchObject({ symbol: "BTCUSDT", timeframe: "1h", count: 10, stale: false, freshness_ms: 600_000, source_active: "coingecko", refreshed: false });
     expect(body.candles[0]).toMatchObject({ open_time: T0, open: 100 });
@@ -220,7 +228,7 @@ describe("GET /api/candles and POST /api/ingest", () => {
     const { store } = await mk(10);
     const ingestFn = vi.fn(async () => { throw new BlockedSourceDataError([{ source: "coingecko", ok: false, httpStatus: 429, code: "HTTP_429", message: "", retried: false }]); });
     const app = candlesRoutes({ store, ingestFn: ingestFn as never, now: () => T0 + 9 * H + 2 * H + 1 });
-    const body = await (await app.request("/?symbol=BTCUSDT&timeframe=1h")).json();
+    const body = await readBody(await app.request("/?symbol=BTCUSDT&timeframe=1h"));
     expect(body.stale).toBe(true);
     expect(body.refresh_error).toEqual({ code: "BLOCKED_SOURCE_DATA", attempts: [{ source: "coingecko", httpStatus: 429, code: "HTTP_429" }] });
     expect(body.count).toBe(10);
@@ -229,7 +237,7 @@ describe("GET /api/candles and POST /api/ingest", () => {
     const { store } = await mk(0);
     const ingestFn = vi.fn(async (s: typeof store) => { await s.insertCandles(series(3).map((c) => ({ symbol: "BTCUSDT", timeframe: "1h" as const, openTime: c.time, open: c.open, high: c.high, low: c.low, close: c.close, volume: 1, source: "binance" as const }))); return {} as never; });
     const app = candlesRoutes({ store, ingestFn: ingestFn as never, now: () => T0 + 3 * H });
-    const body = await (await app.request("/?symbol=BTCUSDT&timeframe=1h")).json();
+    const body = await readBody(await app.request("/?symbol=BTCUSDT&timeframe=1h"));
     expect(ingestFn).toHaveBeenCalledTimes(1);
     expect(body).toMatchObject({ count: 3, refreshed: true, source_active: "binance" });
   });
@@ -239,7 +247,7 @@ describe("GET /api/candles and POST /api/ingest", () => {
     const app = candlesRoutes({ store, ingestFn: (async () => { throw new BlockedSourceDataError(attempts); }) as never });
     const res = await app.request("/?symbol=BTCUSDT&timeframe=1h");
     expect(res.status).toBe(503);
-    expect((await res.json()).error).toBe("BLOCKED_SOURCE_DATA");
+    expect((await readBody(res)).error).toBe("BLOCKED_SOURCE_DATA");
   });
   it("validates query parameters (400) and rate-limits per client (429)", async () => {
     const { store } = await mk(0);
