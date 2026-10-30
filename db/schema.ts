@@ -127,6 +127,32 @@ export const schedulerState = sarmaye.table("scheduler_state", {
   lastSuccessAt: ts("lastSuccessAt"), lastError: text("lastError"), runCount: integer("runCount").notNull().default(0),
 });
 
+/** Phase A: real OHLCV candles from the free-source cascade. Idempotent via UNIQUE(symbol, timeframe, open_time). */
+export const candles = sarmaye.table("candles", {
+  id: serial("id").primaryKey(),
+  symbol: varchar("symbol", { length: 24 }).notNull(),
+  timeframe: varchar("timeframe", { length: 8 }).notNull(),
+  openTime: bigint("open_time", { mode: "number" }).notNull(),
+  open: doublePrecision("open").notNull(),
+  high: doublePrecision("high").notNull(),
+  low: doublePrecision("low").notNull(),
+  close: doublePrecision("close").notNull(),
+  volume: doublePrecision("volume").notNull(),
+  source: varchar("source", { length: 24 }).notNull(),
+  ingestedAt: ts("ingested_at").defaultNow().notNull(),
+}, (t) => ({ unique: uniqueIndex("candles_symbol_tf_open_time_uq").on(t.symbol, t.timeframe, t.openTime) }));
+
+/** Gaps found between consecutive candles (> 1.5 x timeframe apart). */
+export const candleGaps = sarmaye.table("candle_gaps", {
+  id: serial("id").primaryKey(),
+  symbol: varchar("symbol", { length: 24 }).notNull(),
+  timeframe: varchar("timeframe", { length: 8 }).notNull(),
+  fromOpenTime: bigint("from_open_time", { mode: "number" }).notNull(),
+  toOpenTime: bigint("to_open_time", { mode: "number" }).notNull(),
+  missingBars: integer("missing_bars").notNull(),
+  detectedAt: ts("detected_at").defaultNow().notNull(),
+}, (t) => ({ unique: uniqueIndex("candle_gaps_uq").on(t.symbol, t.timeframe, t.fromOpenTime, t.toOpenTime) }));
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type PaperTrade = typeof paperTrades.$inferSelect;

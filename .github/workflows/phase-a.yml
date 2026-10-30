@@ -1,0 +1,90 @@
+name: phase-a
+# Phase A proof: typecheck + lint + unit/integration tests (real Postgres) + LIVE cascade ingest + live /api/candles.
+on:
+  workflow_dispatch:
+  push:
+    branches: [phase-a-ingest]
+permissions:
+  contents: write
+jobs:
+  phase-a:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env: { POSTGRES_PASSWORD: ci, POSTGRES_DB: sarmaye_phase_a }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DB_PROBE: "true"
+      DATABASE_URL: postgres://postgres:ci@localhost:5432/sarmaye_phase_a
+      OWNER_PASSWORD: phase-a-owner-password-123
+      SESSION_SECRET: phase-a-session-secret-0123456789abcdef0123456789abcdef
+      CRON_SECRET: phase-a-cron-secret-0123456789abcdef
+      DISABLE_SCHEDULER: "true"
+      PORT: "3000"
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: mkdir -p evidence
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Lint (errors only)
+        run: npm run lint -- --quiet
+
+      - name: Tests (unit + Postgres integration)
+        run: npx vitest run --reporter=verbose 2>&1 | tee evidence/tests.txt
+
+      - name: Live cascade ingest into Postgres (real network, no mocks)
+        if: ${{ !cancelled() }}
+        run: npx tsx api/ingest/live-proof.ts
+
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: npm run build
+
+      - name: Live GET /api/candles (real server, real DB)
+        if: ${{ !cancelled() }}
+        run: |
+          NODE_ENV=production nohup node dist/boot.js > evidence/server.log 2>&1 &
+          for i in $(seq 1 40); do curl -sf http://localhost:3000/api/jobs/status >/dev/null && break; sleep 1; done
+          # BTCUSDT 1h was stored by the live ingest step: served from the DB
+          curl -s -o evidence/candles-BTCUSDT-1h.json -w "BTCUSDT 1h -> HTTP %{http_code}\n" "http://localhost:3000/api/candles?symbol=BTCUSDT&timeframe=1h&limit=200" | tee evidence/http.txt
+          # ETHUSDT 15m is empty in the DB: the endpoint runs the cascade on demand (CoinGecko has no 15m, so it must fall through)
+          curl -s -o evidence/candles-ETHUSDT-15m.json -w "ETHUSDT 15m -> HTTP %{http_code}\n" "http://localhost:3000/api/candles?symbol=ETHUSDT&timeframe=15m&limit=200" | tee -a evidence/http.txt
+          for f in BTCUSDT-1h ETHUSDT-15m; do
+            echo "== $f"; jq '{symbol,timeframe,count,stale,freshness_ms,source_active,refreshed,refresh_error,first:.candles[0],last:.candles[-1]}' evidence/candles-$f.json | tee -a evidence/http.txt
+          done
+          jq -e '.count > 0 and .count <= 200' evidence/candles-BTCUSDT-1h.json
+          jq -e '.count > 0 and .count <= 200' evidence/candles-ETHUSDT-15m.json
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "## Phase A evidence (commit ${GITHUB_SHA})"
+            echo '### Tests'; grep -E "Test Files|Tests " evidence/tests.txt || echo "no test summary"
+            echo '### Live ingest'; echo '```json'; jq '{migrationsApplied,sourceProbe,run1:(.run1|{source,httpStatus,fetched,valid,inserted,rowsBefore,rowsAfter,attempts}),reinsertSameRows,run2,ok,error,attempts}' evidence/live-proof.json 2>/dev/null || echo "live-proof.json missing"; echo '```'
+            echo '### HTTP'; echo '```'; cat evidence/http.txt 2>/dev/null; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: phase-a-evidence, path: evidence/ }
+
+      - name: Publish evidence branch
+        if: always()
+        run: |
+          cp -r evidence /tmp/phase-a-evidence && cd /tmp/phase-a-evidence
+          git init -q -b phase-a-evidence && git config user.name "phase-a-bot" && git config user.email "phase-a-bot@users.noreply.github.com"
+          git add -A && git commit -qm "phase-a evidence ${GITHUB_SHA} run ${GITHUB_RUN_ID}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" phase-a-evidence

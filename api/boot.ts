@@ -9,6 +9,7 @@ import { log } from "./lib/logger";
 import { handleClientLog } from "./lib/clientlog";
 import { REQUEST_ID_HEADER, runWithRequestId } from "./lib/requestcontext";
 import { jobsRoutes } from "./routes/jobs";
+import { candlesRoutes, ingestRoutes } from "./routes/candles";
 import { startScheduler } from "./scheduler";
 import { runMigrations } from "./queries/migrate";
 
@@ -61,6 +62,8 @@ app.use("*", async (c, next) => {
 // /api/log keeps its own 64KB caps in lib/clientlog.ts, so it needs no middleware.
 app.use("/api/trpc/*", bodyLimit({ maxSize: 1024 * 1024 }));
 app.route("/api/jobs", jobsRoutes);
+app.route("/api/candles", candlesRoutes());
+app.route("/api/ingest", ingestRoutes());
 startScheduler();
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
