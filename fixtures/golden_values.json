@@ -1,0 +1,157 @@
+{
+  "meta": {
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "source": "binance_vision",
+    "source_http_status": 200,
+    "source_attempts": [
+      {
+        "source": "binance_vision",
+        "attempt": 1,
+        "http_status": 200,
+        "ok": true
+      }
+    ],
+    "generated_at": "2026-10-31T08:51:43.583568+00:00",
+    "candle_count": 999,
+    "first_open_time": 1789837200000,
+    "last_open_time": 1793430000000,
+    "reference_library": "TA-Lib 0.8.3",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "python": "3.12.15",
+    "seed": 42,
+    "reference_kind": {
+      "ta_lib": [
+        "rsi14",
+        "ema20",
+        "ema50",
+        "ema200",
+        "macd",
+        "macd_signal",
+        "macd_hist",
+        "atr14",
+        "bb_mid",
+        "bb_upper",
+        "bb_lower",
+        "adx14",
+        "plus_di",
+        "minus_di"
+      ],
+      "pandas_formula_not_library": [
+        "vwap_daily",
+        "stochrsi_k",
+        "stochrsi_d",
+        "rvol20"
+      ]
+    },
+    "definitions": {
+      "stochrsi": "k = (RSI - min(RSI,14)) / (max(RSI,14) - min(RSI,14)) * 100 over 14 RSI values incl. current; d = SMA(k,3)",
+      "vwap_daily": "cumulative sum(typical*volume)/cumulative sum(volume), typical=(H+L+C)/3, reset at 00:00 UTC",
+      "rvol20": "volume / SMA(volume,20), the 20-candle window includes the current candle",
+      "bb": "SMA(20) +/- 2 * population standard deviation"
+    }
+  },
+  "points": [
+    {
+      "index": 453,
+      "time": 1791468000000,
+      "iso": "2026-10-08T14:00:00+00:00",
+      "values": {
+        "rsi14": 42.284999411576315,
+        "ema20": 82927.43843141153,
+        "ema50": 83673.13575420565,
+        "ema200": 84485.64685132621,
+        "macd": -373.02488775023085,
+        "macd_signal": -385.215500867446,
+        "macd_hist": 12.19061311721515,
+        "atr14": 466.7620195854583,
+        "bb_mid": 82930.46800000001,
+        "bb_upper": 83638.51201336636,
+        "bb_lower": 82222.42398663366,
+        "adx14": 48.25369911432804,
+        "plus_di": 10.141182393036368,
+        "minus_di": 28.1559178559823,
+        "stochrsi_k": 92.13887506560091,
+        "stochrsi_d": 38.44551087410313,
+        "vwap_daily": 82709.52047997576,
+        "rvol20": 1.3741925100085908
+      }
+    },
+    {
+      "index": 791,
+      "time": 1792684800000,
+      "iso": "2026-10-22T16:00:00+00:00",
+      "values": {
+        "rsi14": 26.13226230526854,
+        "ema20": 82390.90075349313,
+        "ema50": 82738.650784713,
+        "ema200": 82547.41839594387,
+        "macd": -530.6720813171705,
+        "macd_signal": -397.67043504785863,
+        "macd_hist": -133.0016462693119,
+        "atr14": 447.7200600963546,
+        "bb_mid": 82656.33999999995,
+        "bb_upper": 84708.38641302282,
+        "bb_lower": 80604.29358697709,
+        "adx14": 43.488719664284304,
+        "plus_di": 9.480781893620053,
+        "minus_di": 37.68428074976264,
+        "stochrsi_k": 0.0,
+        "stochrsi_d": 21.50920747840209,
+        "vwap_daily": 82342.64294328143,
+        "rvol20": 1.2217930584622732
+      }
+    },
+    {
+      "index": 862,
+      "time": 1792940400000,
+      "iso": "2026-10-25T15:00:00+00:00",
+      "values": {
+        "rsi14": 50.19030659587354,
+        "ema20": 80583.52799066056,
+        "ema50": 80852.70049062812,
+        "ema200": 81731.24030741032,
+        "macd": -70.36754689257941,
+        "macd_signal": -87.65607814571524,
+        "macd_hist": 17.28853125313583,
+        "atr14": 288.360428001391,
+        "bb_mid": 80620.859,
+        "bb_upper": 81035.26064786834,
+        "bb_lower": 80206.45735213165,
+        "adx14": 32.42433912581706,
+        "plus_di": 20.13160049735743,
+        "minus_di": 23.087644704168063,
+        "stochrsi_k": 73.55981759316182,
+        "stochrsi_d": 59.25875241323191,
+        "vwap_daily": 80613.65197868332,
+        "rvol20": 1.3116469537334412
+      }
+    },
+    {
+      "index": 998,
+      "time": 1793430000000,
+      "iso": "2026-10-31T07:00:00+00:00",
+      "values": {
+        "rsi14": 45.57608754922247,
+        "ema20": 77424.85961861651,
+        "ema50": 78215.35336146037,
+        "ema200": 79945.68483767883,
+        "macd": -270.7558888363419,
+        "macd_signal": -385.0166665300085,
+        "macd_hist": 114.26077769366657,
+        "atr14": 427.8327751984119,
+        "bb_mid": 77223.89550000003,
+        "bb_upper": 77736.22857578084,
+        "bb_lower": 76711.56242421921,
+        "adx14": 24.72926982600102,
+        "plus_di": 19.378468272233302,
+        "minus_di": 24.95147466610365,
+        "stochrsi_k": 90.41044558759475,
+        "stochrsi_d": 88.00794021631343,
+        "vwap_daily": 77377.77557901206,
+        "rvol20": 0.5659842977048742
+      }
+    }
+  ]
+}
