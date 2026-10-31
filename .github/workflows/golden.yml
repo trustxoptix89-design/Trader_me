@@ -1,0 +1,30 @@
+name: Golden values
+# Generates fixtures/btcusdt_1h.json (REAL candles) and fixtures/golden_values.json (TA-Lib reference)
+# and commits them back to the branch. Runs only when the generator changes, so the frozen
+# dataset used by the indicator tests never drifts silently.
+on:
+  push:
+    branches: ["phase-b-indicators"]
+    paths:
+      - "tools/golden/**"
+      - ".github/workflows/golden.yml"
+permissions:
+  contents: write
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pandas TA-Lib
+      - name: Generate fixtures from real data
+        run: python tools/golden/generate_golden.py
+      - name: Commit fixtures
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add fixtures/btcusdt_1h.json fixtures/golden_values.json
+          git commit -m "Phase B: golden values (TA-Lib) on real BTCUSDT 1h candles" || echo "nothing to commit"
+          git push
