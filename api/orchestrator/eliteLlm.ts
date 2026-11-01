@@ -1,11 +1,12 @@
 import type { ElitePayload } from "../types/advanced";
+import { eliteHeuristic } from "./eliteHeuristic";
 
 /**
- * Elite model call. NOT CONFIGURED on purpose: the project forbids anything that needs a real key
- * (spec non-goals), so this rejects and the Elite Council fails safe to NO_TRADE.
- * Implementations MUST honour `signal` (reject when aborted) so the 10s circuit breaker works.
+ * Elite model call. The project forbids anything that needs a real key (spec non-goals), so this is a
+ * deterministic heuristic (eliteHeuristic), not a language model. It keeps the async + AbortSignal contract so a
+ * real model can replace it later without touching evaluateEliteCouncil; the 10s circuit breaker still applies.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- stub keeps the real signature
 export async function callEliteLLM(payload: ElitePayload, signal: AbortSignal): Promise<unknown> {
-  throw new Error("ELITE_LLM_NOT_CONFIGURED");
+  if (signal.aborted) throw new Error("ELITE_ABORTED");
+  return eliteHeuristic(payload);
 }

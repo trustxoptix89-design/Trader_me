@@ -31,6 +31,14 @@ export const ElitePayloadSchema = z.object({
   rr: z.number(),
   trend: DeltaTrendSchema.optional(),
   range: DeltaRangeSchema.optional(),
+  /** Risk Room verdict. The deterministic fallback may only let a signal pass when this is exactly "PASS". */
+  riskRoom: z.enum(["PASS", "HALT", "ESCALATE"]).optional(),
+  /** Direction the Approval Room majority is leaning to (the candidate the Elite Council confirms or vetoes). */
+  proposedAction: z.enum(["LONG", "SHORT"]).optional(),
+  /** Weighted dissent share in the Approval Room, 0..1. */
+  dissentRatio: z.number().min(0).max(1).optional(),
+  /** freshness_ms / (2 x timeframe_ms): 1 means the Data Room stale limit is reached. */
+  freshnessRatio: z.number().min(0).optional(),
 });
 export type ElitePayload = z.infer<typeof ElitePayloadSchema>;
 
