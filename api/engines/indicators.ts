@@ -1,7 +1,7 @@
 import type { Candle, MarketMetrics, MarketSnapshot } from "@contracts/types";
-import { sma, emaSeries, rsiSeries, atrSeries, adxSeries, macdHistogram, macdSeries, vwapSeries, swingLevels } from "@contracts/indicators";
+import { sma, emaSeries, rsiSeries, atrSeries, adxSeries, macdHistogram, macdSeries, vwapSeries, swingLevels, bollingerSeries } from "@contracts/indicators";
 
-export { sma, emaSeries, rsiSeries, atrSeries, adxSeries, macdHistogram, macdSeries, vwapSeries, swingLevels };
+export { sma, emaSeries, rsiSeries, atrSeries, adxSeries, macdHistogram, macdSeries, vwapSeries, swingLevels, bollingerSeries };
 
 export function trendOf(candles: Candle[]): MarketMetrics["trend"] {
   const closes = candles.map((c) => c.close);

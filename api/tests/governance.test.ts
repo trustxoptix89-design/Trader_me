@@ -166,7 +166,9 @@ describe("8-state orchestrator (Phase D wiring)", () => {
     expect(r.status).toBe("approved");
     expect(r.mode).toBe("trend");
     expect(r.statesVisited).toEqual([...PIPELINE_STATES]);
-    expect(new Set(r.audit.map((a) => a.idempotencyKey)).size).toBe(r.audit.length);
+    expect(new Set(r.events.map((a) => a.idempotencyKey)).size).toBe(r.events.length);
+    expect(r.verifier?.status).toBe("OK");
+    expect(r.events[r.events.length - 1].kind).toBe("STATE_TRANSITION");
     expect(r.notified).toBe(false); // no notifier injected: skipped, not faked
   });
   it("calls the notifier only for approved signals", async () => {
@@ -185,16 +187,18 @@ describe("8-state orchestrator (Phase D wiring)", () => {
     expect(r.mode).toBe("range");
     expect(r.votes[0].verdict).toBe("bearish");
     expect(r.direction).toBe("short");
-    expect(r.status).toBe("approved");
+    expect(r.approval?.status).toBe("APPROVED"); // all rooms and votes agree...
+    expect(r.status).toBe("inconclusive"); // ...but the Independent Verifier sees 1H candles nowhere near this setup and vetoes
+    expect(r.haltReason).toContain("VERIFIER_VETO");
   });
-  it("dissent > 30% with Delta Force CONFLICT triggers the Elite Council and ends in NO_TRADE (inconclusive)", async () => {
+  it("Delta Force CONFLICT halts at RECONCILED (CONTRADICTION_INDICATORS): never reaches the approval vote", async () => {
     const mix = [agent("A1", "bullish"), agent("A2", "bullish"), agent("B1", "bullish"), agent("C1", "bullish"), agent("D1", "bearish")];
     const r = await runSignalPipeline(baseInput("conflict", mix));
     expect(r.trend?.verdict).toBe("CONFLICT");
-    expect(r.approval?.eliteTriggered).toBe(true);
-    expect(r.approval?.elite?.action).toBe("NO_TRADE");
     expect(r.status).toBe("inconclusive");
-    expect(r.haltReason).toBe("ELITE_NO_TRADE");
+    expect(r.haltReason).toContain("CONTRADICTION_INDICATORS");
+    expect(r.approval).toBeUndefined();
+    expect(r.statesVisited).toEqual(["DETECTED", "DATA_VALIDATED", "INDICATORS_READY", "AGENTS_RUN", "RECONCILED", "RECORDED"]);
   });
   it("dissent > 30% with ULTRA_TREND and Risk Room PASS: Elite confirms and the signal is approved", async () => {
     const dissent = [agent("A1", "bullish"), agent("A2", "bullish"), agent("C1", "neutral"), agent("C2", "neutral"), agent("C3", "neutral")];
@@ -222,9 +226,9 @@ describe("8-state orchestrator (Phase D wiring)", () => {
     expect(r.status).toBe("inconclusive");
     expect(r.haltReason).toContain("PIPELINE_ERROR");
   });
-  it("is reproducible: same input -> same audit hashes", async () => {
+  it("is reproducible: same input -> same audit hash chain", async () => {
     const a = await runSignalPipeline(baseInput("up", bulls));
     const b = await runSignalPipeline(baseInput("up", bulls));
-    expect(a.audit.map((x) => x.outputHash)).toEqual(b.audit.map((x) => x.outputHash));
+    expect(a.events.map((x) => x.rowHash)).toEqual(b.events.map((x) => x.rowHash));
   });
 });

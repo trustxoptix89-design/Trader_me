@@ -1,4 +1,5 @@
 import type { EliteCouncilOutput, ElitePayload } from "../types/advanced";
+import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 
 /**
  * Deterministic Elite Council fallback. No LLM, no network, no key: the same payload always gives the same answer.
@@ -12,21 +13,20 @@ import type { EliteCouncilOutput, ElitePayload } from "../types/advanced";
  *   6. Delta Force gives a direction that disagrees    -> NO_TRADE
  *   7. otherwise                                       -> the candidate direction
  *
- * The thresholds below are engineering choices of this project, NOT values from the specification PDF.
+ * Thresholds (borderlineRr, borderlineFreshnessRatio) are PROPOSED parameters of the governance config, NOT values from the specification PDF.
  */
-export const BORDERLINE_RR = 1.8; // hard floor is 1.5 (Risk Room / Elite hard gate); within 20% above it is borderline
-export const BORDERLINE_FRESHNESS_RATIO = 0.75; // data older than 75% of the Data Room stale limit
 export const PASS_CONFIDENCE = 0.6;
 export const NO_TRADE_CONFIDENCE = 0.9;
 
 const noTrade = (reasoning: string): EliteCouncilOutput => ({ action: "NO_TRADE", reasoning: reasoning.slice(0, 200), confidence: NO_TRADE_CONFIDENCE });
 
-export function eliteHeuristic(payload: ElitePayload): EliteCouncilOutput {
+export function eliteHeuristic(payload: ElitePayload, cfg: GovernanceConfig = DEFAULT_GOVERNANCE_CONFIG): EliteCouncilOutput {
+  const { borderlineRr, borderlineFreshnessRatio } = cfg.values;
   if (payload.trend?.verdict === "CONFLICT") return noTrade("Delta Force trend verdict is CONFLICT: timeframes disagree.");
   if (payload.range?.verdict === "RANGE_TOO_TIGHT") return noTrade("Delta Force range verdict is RANGE_TOO_TIGHT: range too narrow to trade.");
 
-  if (payload.rr < BORDERLINE_RR) return noTrade(`Borderline R:R ${payload.rr.toFixed(2)} < ${BORDERLINE_RR}.`);
-  if (payload.freshnessRatio !== undefined && payload.freshnessRatio > BORDERLINE_FRESHNESS_RATIO) {
+  if (payload.rr < borderlineRr) return noTrade(`Borderline R:R ${payload.rr.toFixed(2)} < ${borderlineRr}.`);
+  if (payload.freshnessRatio !== undefined && payload.freshnessRatio > borderlineFreshnessRatio) {
     return noTrade(`Borderline data freshness (${(payload.freshnessRatio * 100).toFixed(0)}% of the stale limit).`);
   }
 

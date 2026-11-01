@@ -22,14 +22,17 @@ The evidence for TESTED is the GitHub Actions run of the commit; this table is n
 |---|---|---|
 | Indicators: RSI, EMA, ATR, MACD, VWAP (`contracts/indicators.ts`) | IMPLEMENTED | golden test: `api/tests/golden.test.ts` |
 | Indicators: ADX Wilder, StochRSI, Ichimoku, Supertrend (`api/indicators/deltaforce.trend.ts`) | IMPLEMENTED | ADX and StochRSI covered by the golden test |
-| Bollinger Bands | NOT STARTED | reference values exist in `fixtures/golden_values.json`, no implementation yet |
+| Bollinger Bands (`contracts/indicators.ts`, configurable period / multiplier) | IMPLEMENTED | golden test vs pandas (±0.01%) in `api/tests/golden.test.ts`; unit tests in `api/tests/hardening.test.ts` |
 | Legacy `adxSeries` (`contracts/indicators.ts`) | IMPLEMENTED, deviates | averages DX instead of Wilder smoothing; differs from TA-Lib by 0.7–6.1 ADX points on the golden points. Delta Force uses the Wilder `calcAdx`, which matches |
 | Delta Force trend / range | IMPLEMENTED | `api/tests/advanced.test.ts` |
 | Elite Council (10s circuit breaker, strict schema, deterministic fallback, no LLM) | IMPLEMENTED | `api/orchestrator/elite*.ts` |
 | Data / Error Detection / Risk rooms, Approval Room, 8-state machine | IMPLEMENTED | `api/orchestrator/*`, `api/tests/governance.test.ts` |
-| Chart Quality Room, Independent Verifier | NOT STARTED | not simulated |
-| 33-agent council (PDF) | NOT STARTED | only the legacy 20-role review in `api/engines/council.ts` exists |
-| audit_log persistence in the database | NOT STARTED | the machine returns append-only audit entries as values |
+| Chart Quality Room (`api/orchestrator/chartQuality.ts`) | IMPLEMENTED | S/R touches, BOS on closed candle close, sweep volume, data integrity; `api/tests/hardening.test.ts` |
+| Independent Verifier with absolute veto (`api/orchestrator/verifier.ts`) | IMPLEMENTED | own ATR/structure/fees maths; veto overrides approval; `api/tests/hardening.test.ts` |
+| Governance parameters (`api/orchestrator/config.ts`) | IMPLEMENTED | versioned, classified REFERENCE / EMPIRICAL / PROPOSED (no EMPIRICAL yet); `docs/PARAMETERS.md` |
+| 33-agent council (PDF) | IN PROGRESS | 5 deterministic agents + Delta Force exist (`api/orchestrator/agents.ts`), 28 NOT STARTED; legacy 20-role review in `api/engines/council.ts` exists |
+| Append-only audit log (`db/migrations/0003_audit_log.sql`, `api/orchestrator/audit*.ts`) | IMPLEMENTED | hash-chained, idempotent, DB triggers reject UPDATE/DELETE/TRUNCATE; Postgres tests run in CI (`DB_PROBE`). Not yet wired into the scheduler/routes |
+| End-to-end scenarios (8) | IMPLEMENTED | `api/tests/e2e.scenarios.test.ts` (in-memory always, Postgres when `DB_PROBE=true`) |
 
 ## 3-point golden matching table (Phase B)
 
@@ -68,7 +71,7 @@ Reference: TA-Lib 0.8.3 (RSI, EMA, MACD, ATR, ADX) and the pandas formulas docum
 | StochRSI %K | ±0.5 (project) | 2026-10-25 15:00 (#862) | 73.5598176 | 73.5598176 | 1.4e-13 |
 
 Tolerance values without "(project)" come from the specification. ADX and StochRSI have no specified tolerance; ±0.5 is a project choice.
-Bollinger Bands has no row because it is not implemented.
+Bollinger(20, 2) uses the population standard deviation (pandas `rolling(20).std(ddof=0)`); its three bands are asserted at the same four points by `api/tests/golden.test.ts`.
 
 ## Governance pipeline (Phase D)
 
@@ -80,3 +83,7 @@ Any HALT jumps to `RECORDED` (rejected for a Risk Room halt, inconclusive otherw
 - Approval Room: weighted vote (no simple majority). Weighted dissent above 30% consults the Elite Council.
 - Elite Council fallback (no LLM, no key): NO_TRADE on Delta Force `CONFLICT`, `RANGE_TOO_TIGHT`, borderline data (R:R < 1.8 or data older than 75% of the stale limit), or Risk Room not strictly `PASS`. It can never override a hard group deadlock (both directions at or above 30% weight).
 - Thresholds that are project choices and not specification values: borderline R:R 1.8, borderline freshness 75%, approval threshold 60%, range-vote confidence 0.7.
+
+## Hardening (audit of commit a84b868)
+
+State machine: `docs/STATE_MACHINE.md`. Parameters: `docs/PARAMETERS.md`. Deviations from the PDF are listed in section 5 of the state-machine document.

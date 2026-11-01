@@ -1,4 +1,5 @@
 import type { EliteCouncilOutput } from "../types/advanced";
+import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import type { AgentVote } from "./rooms";
 
 export interface ApprovalConfig {
@@ -8,10 +9,15 @@ export interface ApprovalConfig {
   dissentTrigger: number;
   /** Both opposing directions at or above this weight share -> hard group deadlock (never approved). */
   deadlockShare: number;
-  /** Leading direction must hold at least this weight share. Project choice, not a PDF value. */
+  /** Leading direction must hold at least this weight share. PROPOSED parameter, not a PDF value. */
   approvalThreshold: number;
 }
-export const DEFAULT_APPROVAL_CONFIG: ApprovalConfig = { minValidVotes: 5, dissentTrigger: 0.3, deadlockShare: 0.3, approvalThreshold: 0.6 };
+/** Approval parameters come from the governance config (see config.ts for source and class of each). */
+export function approvalConfigFrom(cfg: GovernanceConfig): ApprovalConfig {
+  const v = cfg.values;
+  return { minValidVotes: v.minValidVotes, dissentTrigger: v.dissentTrigger, deadlockShare: v.deadlockShare, approvalThreshold: v.approvalThreshold };
+}
+export const DEFAULT_APPROVAL_CONFIG: ApprovalConfig = approvalConfigFrom(DEFAULT_GOVERNANCE_CONFIG);
 
 export interface ApprovalTally {
   validVotes: number;

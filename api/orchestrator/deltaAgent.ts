@@ -1,9 +1,8 @@
 import type { DeltaRangeOutput, DeltaTrendOutput } from "../types/advanced";
+import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import type { AgentVote } from "./rooms";
 
 export const DELTA_AGENT_ID = "DELTA_FORCE";
-export const DELTA_ULTRA_WEIGHT = 3;
-export const RANGE_VOTE_CONFIDENCE = 0.7; // project constant for a confirmed range trigger (not from the PDF)
 
 /**
  * Turns Delta Force output into an Approval Room vote.
@@ -14,7 +13,9 @@ export const RANGE_VOTE_CONFIDENCE = 0.7; // project constant for a confirmed ra
  *  - WEAK_TREND / ABSTAIN            -> abstain
  * `range` must be supplied when the trend verdict is RANGE_DETECTED; if it is missing the vote abstains with that reason.
  */
-export function deltaForceVote(trend: DeltaTrendOutput, range?: DeltaRangeOutput): AgentVote {
+export function deltaForceVote(trend: DeltaTrendOutput, range?: DeltaRangeOutput, cfg: GovernanceConfig = DEFAULT_GOVERNANCE_CONFIG): AgentVote {
+  const DELTA_ULTRA_WEIGHT = cfg.values.deltaUltraWeight;
+  const RANGE_VOTE_CONFIDENCE = cfg.values.rangeVoteConfidence;
   const base = { agentId: DELTA_AGENT_ID, group: "B" };
   switch (trend.verdict) {
     case "ULTRA_TREND":

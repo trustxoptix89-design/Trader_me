@@ -138,3 +138,30 @@ export function swingLevels(candles: Candle[], left = 3, right = 3, perSide = 2)
     support: uniq(lows.filter((v) => v < last)).sort((a, b) => b - a).slice(0, perSide),
   };
 }
+
+export interface BollingerSeries { mid: (number | null)[]; upper: (number | null)[]; lower: (number | null)[] }
+
+/**
+ * Bollinger Bands: mid = SMA(period), bands = mid +/- mult * POPULATION standard deviation (divide by n, as TA-Lib and TradingView do).
+ * Strictly causal: value[i] uses only values[i - period + 1 .. i]; null while warming up.
+ */
+export function bollingerSeries(values: number[], period = 20, mult = 2): BollingerSeries {
+  if (!Number.isInteger(period) || period < 2) throw new RangeError("Bollinger period must be an integer >= 2");
+  if (!Number.isFinite(mult) || mult <= 0) throw new RangeError("Bollinger multiplier must be a positive finite number");
+  const n = values.length;
+  const mid: (number | null)[] = Array(n).fill(null);
+  const upper: (number | null)[] = Array(n).fill(null);
+  const lower: (number | null)[] = Array(n).fill(null);
+  for (let i = period - 1; i < n; i++) {
+    let sum = 0;
+    for (let j = i - period + 1; j <= i; j++) sum += values[j];
+    const mean = sum / period;
+    let sq = 0;
+    for (let j = i - period + 1; j <= i; j++) sq += (values[j] - mean) ** 2;
+    const sd = Math.sqrt(sq / period);
+    mid[i] = mean;
+    upper[i] = mean + mult * sd;
+    lower[i] = mean - mult * sd;
+  }
+  return { mid, upper, lower };
+}
