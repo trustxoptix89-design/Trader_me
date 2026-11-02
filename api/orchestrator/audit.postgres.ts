@@ -55,8 +55,9 @@ export class PostgresAuditStore implements AuditStore {
         `INSERT INTO sarmaye.audit_log (${COLUMNS}) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14,$15,$16,$17,$18,$19::jsonb,$20,$21)
          ON CONFLICT (idempotency_key) DO NOTHING RETURNING ${COLUMNS}`,
         [e.correlationId, e.seq, e.kind, e.state, e.symbol, e.timeframe, e.timestamp, e.inputDataHash, e.dataFreshnessMs, e.dataValid,
-          JSON.stringify(e.roomVerdicts), e.riskResult === null ? null : JSON.stringify(e.riskResult), e.verifierResult === null ? null : JSON.stringify(e.verifierResult),
-          e.decision, e.reason, e.configVersion, e.configFingerprint, e.idempotencyKey, e.detail === null ? null : JSON.stringify(e.detail), prevHash, rowHash],
+          // jsonb parameters are passed as plain values: postgres.js serialises them itself (a pre-stringified value would be stored as a JSON *string*)
+          e.roomVerdicts, e.riskResult, e.verifierResult,
+          e.decision, e.reason, e.configVersion, e.configFingerprint, e.idempotencyKey, e.detail, prevHash, rowHash],
       );
       return rows.length ? rowToEvent(rows[0]) : null;
     } catch (err) {

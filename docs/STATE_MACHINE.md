@@ -64,4 +64,4 @@ data valid on all timeframes, Error Detection PASS, Chart Quality PASS, Risk Roo
 | D-5 | ESCALATE (Chart Quality, Risk Room) ends as `inconclusive` | the Supervisory Board that would receive escalations is NOT IMPLEMENTED; nothing is approved by default |
 | D-6 | MACD/RSI contradiction rule and BOS-vs-EMA200 rule of the Error Detection Room are NOT IMPLEMENTED | not enough agent output exists yet |
 | D-7 | Only 5 deterministic agents (+ Delta Force) exist of the PDF's 33 | NOT IMPLEMENTED, not simulated |
-| D-8 | The pipeline persists through `AuditStore`; wiring `PostgresAuditStore` into the scheduler/routes is NOT DONE | callers must pass `audit: new PostgresAuditStore()`; default is in-memory (not durable) |
+| D-8 | See `docs/AUDIT_LOG.md`. The pipeline persists through `AuditStore`; wiring `PostgresAuditStore` into the scheduler/routes is NOT DONE | callers must pass `audit: new PostgresAuditStore()`; default is in-memory (not durable) |
