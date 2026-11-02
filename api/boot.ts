@@ -10,6 +10,10 @@ import { handleClientLog } from "./lib/clientlog";
 import { REQUEST_ID_HEADER, runWithRequestId } from "./lib/requestcontext";
 import { jobsRoutes } from "./routes/jobs";
 import { candlesRoutes, ingestRoutes } from "./routes/candles";
+import { healthRoutes } from "./routes/health";
+import { createPgStore } from "./ingest/store";
+import { getAuditRuntime } from "./orchestrator/runtime";
+import { postgresJsExecutor } from "./orchestrator/audit.postgres";
 import { startScheduler } from "./scheduler";
 import { runMigrations } from "./queries/migrate";
 
@@ -64,6 +68,7 @@ app.use("/api/trpc/*", bodyLimit({ maxSize: 1024 * 1024 }));
 app.route("/api/jobs", jobsRoutes);
 app.route("/api/candles", candlesRoutes());
 app.route("/api/ingest", ingestRoutes());
+app.route("/api/health", healthRoutes({ candleStore: createPgStore(), db: process.env.DATABASE_URL ? postgresJsExecutor() : null, audit: getAuditRuntime() }));
 startScheduler();
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
