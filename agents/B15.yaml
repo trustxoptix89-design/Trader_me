@@ -1,0 +1,17 @@
+id: B15
+group: B
+name: Stochastic RSI Cross
+version: "1.0"
+implementation: deterministic
+code_agent_id: B15_STOCH_RSI
+status: IMPLEMENTED
+mandate: "V6 Appendix 2 section 6: StochRSI(14,14) crossing its 3-period SMA signal on the last closed candle inside the below-20 zone is bullish, inside the above-80 zone is bearish, otherwise neutral."
+inputs: [ohlcv_1h]
+outputs:
+  - {key: verdict, type: "enum[bullish,bearish,neutral,abstain]"}
+  - {key: confidence, type: "float[0,1]"}
+  - {key: evidence_refs, type: list}
+validation: ["no look-ahead", "cross on last closed candle only"]
+abstention_rule: "abstain if fewer candles than StochRSI(14,14) plus a 3-period signal need"
+evidence_required: [timestamp, input_hash, output_json, timeframes_evaluated]
+tests: [api/tests/agents.test.ts]

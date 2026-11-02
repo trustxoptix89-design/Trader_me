@@ -57,7 +57,7 @@ describe.each(stores)("8 end-to-end scenarios [%s audit store]", (name, makeStor
     expect(r.verifier?.status).toBe("OK");
     expect(states(r)).toEqual(["DETECTED", "DATA_VALIDATED", "INDICATORS_READY", "AGENTS_RUN", "RECONCILED", "RISK_CHECKED", "GATED", "RECORDED", "NOTIFIED"]);
     expect(r.approval?.tally.leading).toBe("bullish"); // real agents, not a unanimous stub: MACD may dissent after a pullback
-    expect(r.votes.length).toBe(6); // Delta Force + the 5 implemented agents
+    expect(r.votes.length).toBe(7); // Delta Force + the 6 implemented agents (A01, B09-B12, B15)
     expect(notified).toBe(1);
     assertAuditInvariants(r);
   });

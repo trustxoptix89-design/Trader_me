@@ -1,0 +1,17 @@
+id: B11
+group: B
+name: MACD Histogram
+version: "1.0"
+implementation: deterministic
+code_agent_id: B11_MACD
+status: IMPLEMENTED
+mandate: "MACD(12,26,9) histogram above zero is bullish, below zero is bearish, zero is neutral."
+inputs: [ohlcv_1h]
+outputs:
+  - {key: verdict, type: "enum[bullish,bearish,neutral,abstain]"}
+  - {key: confidence, type: "float[0,1]"}
+  - {key: evidence_refs, type: list}
+validation: ["no look-ahead"]
+abstention_rule: "abstain if fewer candles than MACD(12,26,9) needs"
+evidence_required: [timestamp, input_hash, output_json, timeframes_evaluated]
+tests: [api/tests/agents.test.ts]

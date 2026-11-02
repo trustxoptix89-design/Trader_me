@@ -1,0 +1,17 @@
+id: B12
+group: B
+name: Bollinger Midline
+version: "1.0"
+implementation: deterministic
+code_agent_id: B12_BB
+status: IMPLEMENTED
+mandate: "Close above the Bollinger(20,2) midline is bullish, below is bearish, on the midline is neutral."
+inputs: [ohlcv_1h]
+outputs:
+  - {key: verdict, type: "enum[bullish,bearish,neutral,abstain]"}
+  - {key: confidence, type: "float[0,1]"}
+  - {key: evidence_refs, type: list}
+validation: ["no look-ahead", "population stdev"]
+abstention_rule: "abstain if fewer than 20 candles"
+evidence_required: [timestamp, input_hash, output_json, timeframes_evaluated]
+tests: [api/tests/agents.test.ts]

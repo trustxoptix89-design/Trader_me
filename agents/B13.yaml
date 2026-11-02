@@ -1,0 +1,14 @@
+id: B13
+group: B
+name: "NOT SPECIFIED IN V6 (slot B13)"
+version: "0"
+implementation: stub
+status: NOT_IMPLEMENTED
+mandate: "NOT IMPLEMENTED: V6 gives no name or rule for this slot; it does not vote and is excluded from every KPI."
+inputs: []
+outputs:
+  - {key: verdict, type: "enum[abstain]"}
+validation: []
+abstention_rule: "always abstain: stub, never part of a decision"
+evidence_required: []
+tests: []

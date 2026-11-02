@@ -1,4 +1,5 @@
 import { bollingerSeries, emaSeries, macdSeries, rsiSeries } from "@contracts/indicators";
+import { calcStochRsi } from "../indicators/deltaforce.trend";
 import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import type { AgentContext } from "./machine";
 import type { AgentVote, VoteVerdict } from "./rooms";
@@ -57,4 +58,20 @@ export const bollingerAgent: Agent = ({ candles }) => {
   return px > mid ? vote("B12_BB", "B", "bullish", 0.4, "close above midline") : px < mid ? vote("B12_BB", "B", "bearish", 0.4, "close below midline") : vote("B12_BB", "B", "neutral", 0.3, "close on midline");
 };
 
-export const defaultAgents = (cfg: GovernanceConfig = DEFAULT_GOVERNANCE_CONFIG): Agent[] => [structureAgent, emaTrendAgent, rsiAgent(cfg), macdAgent, bollingerAgent];
+/**
+ * B15: Stochastic RSI cross (V6 Appendix 2 section 6): StochRSI(14,14) crossing its 3-period SMA signal line on the LAST closed
+ * candle, inside the < 20 zone = bullish, inside the > 80 zone = bearish. Anything else is neutral (no cross / no extreme zone).
+ */
+export const stochRsiAgent: Agent = ({ candles }) => {
+  const stoch = calcStochRsi(candles["1H"].map((k) => k.close), 14, 14);
+  const n = stoch.length;
+  const sig = (i: number): number => (i >= 2 && [0, 1, 2].every((d) => Number.isFinite(stoch[i - d])) ? (stoch[i] + stoch[i - 1] + stoch[i - 2]) / 3 : Number.NaN);
+  const [s0, s1, g0, g1] = [stoch[n - 1], stoch[n - 2], sig(n - 1), sig(n - 2)];
+  if (![s0, s1, g0, g1].every(Number.isFinite)) return vote("B15_STOCH_RSI", "B", "abstain", 0, "not enough history for StochRSI(14,14) with its 3-period signal");
+  const up = s1 <= g1 && s0 > g0, down = s1 >= g1 && s0 < g0;
+  if (up && s0 < 20) return vote("B15_STOCH_RSI", "B", "bullish", 0.5, `StochRSI ${s0.toFixed(1)} crossed above its signal below 20`);
+  if (down && s0 > 80) return vote("B15_STOCH_RSI", "B", "bearish", 0.5, `StochRSI ${s0.toFixed(1)} crossed below its signal above 80`);
+  return vote("B15_STOCH_RSI", "B", "neutral", 0.3, `StochRSI ${s0.toFixed(1)}: no cross inside an extreme zone`);
+};
+
+export const defaultAgents = (cfg: GovernanceConfig = DEFAULT_GOVERNANCE_CONFIG): Agent[] => [structureAgent, emaTrendAgent, rsiAgent(cfg), macdAgent, bollingerAgent, stochRsiAgent];

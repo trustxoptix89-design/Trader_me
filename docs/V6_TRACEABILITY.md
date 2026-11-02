@@ -24,8 +24,14 @@ TESTED = تست خودکار سبز در CI. VERIFIED = شاهد اجرای وا
 ## فاز C — عوامل
 | الزام | وضعیت | شاهد |
 |---|---|---|
-| ≥۱۰ عامل واقعی با قالب YAML | NOT IMPLEMENTED | ۶ عامل در `agents.ts`/`deltaAgent.ts` (A01, B09–B12, Delta)؛ هیچ YAML ندارد |
-| ۳۳ عامل (A01–E33) | PARTIAL: 6 از 33 | ۲۷ مورد وجود ندارد؛ stub برچسب‌دار هم نیست |
+| قالب YAML برای هر عامل (`agents/*.yaml`) + اعتبارسنج قالب | TESTED | `api/orchestrator/agentSpec.ts`, `api/tests/agents.test.ts` |
+| ≥۱۰ عامل واقعی با قالب YAML | NOT IMPLEMENTED: ۷ عامل واقعی (A01, B09, B10, B11, B12, B15 + DELTA_FORCE) از حداقل ۱۰ | سه عامل دیگر لازم است؛ V6 نام/قاعدهٔ اسلات‌ها را نداده (جز قواعد ضمیمهٔ ۲) |
+| ۳۳ اسلات A01..E33 | PARTIAL: ۶ واقعی، ۲۷ stub صریح با `status: NOT_IMPLEMENTED` (در رأی‌گیری و KPI شرکت نمی‌کنند) | تست «هر اسلات دقیقاً یک بار» + «stub هرگز رأی نمی‌دهد» |
+| تست داده واقعی (خروجی معتبر) و تست abstain برای هر عامل | TESTED (روی ۹۹۹ کندل BTCUSDT 1h واقعی fixture) | `agents.test.ts` |
+| اجرای Orchestrator با ≤۳ عامل و ثبت `agent_runs` در DB | NOT IMPLEMENTED (جدول `agent_runs` وجود ندارد) | — |
+| README: کدام deterministic/ai_call/stub | PARTIAL | فقط در YAMLها |
+
+انحراف‌های ثبت‌شده: (۱) DELTA_FORCE در شماره‌گذاری V6 اسلات ندارد (بدون ابداع، خارج از ۳۳ نگه داشته شد). (۲) B15=Stochastic RSI از قاعدهٔ صریح ضمیمهٔ ۲ بخش ۶ ساخته شد؛ **انتساب این قاعده به اسلات B15 انتخاب اداری من است و نیاز به تأیید شما دارد.** (۳) افزودن عامل ششم، تعداد رأی‌ها را از ۶ به ۷ برد؛ سناریوهای E2E دوباره سبز شدند.
 
 ## فاز D — اتاق‌ها و حاکمیت
 | الزام | وضعیت | شاهد |
@@ -60,4 +66,11 @@ TESTED = تست خودکار سبز در CI. VERIFIED = شاهد اجرای وا
 - T-1: ستون‌های `audit_log` در §6 (signal_id/state/room/verdict/reason/input_hash/output_hash/timestamp/idempotency_key) با طرح فعلی (زنجیرهٔ hash + seq) فرق دارد. پیشنهاد: نگاشت view سازگار با §6.
 - T-2 (D-3): Delta CONFLICT → توقف در RECONCILED در پیاده‌سازی، با V2 هم‌خوان نیست.
 - T-3: شروع تنظیم آستانه‌ها: همهٔ پارامترهای فعلی REFERENCE/PROPOSED‌اند و EMPIRICAL ندارند.
-- T-4: ساخت setup (entry/stop/target) برای خط لولهٔ جدید در V6 تعریف دقیق ندارد؛ اتصال Scheduler به pipeline بدون این تعریف قانون جدید می‌سازد → نیاز به تصمیم شما.
+- T-4: **حل‌شده با تصمیم معماری D-4** (بخش بعد).
+
+## تصمیم معماری D-4 (شما، ۲ نوامبر ۲۰۲۶): تولید Setup
+متن تصمیم: Entry/SL/TP را یک موتور قطعی، مستقل از LLM و بر پایهٔ تحلیل تکنیکال معتبر و داده تولید می‌کند. اتاق Risk فقط اعتبارسنجی می‌کند (R:R، محدودیت‌ها) و مرجع تولید نقاط نیست. Independent Verifier حق رد/وتوی Setup را دارد. Elite Council فقط بازبین نهایی است و جای محاسبهٔ قطعی را نمی‌گیرد. دادهٔ ناکافی → ABSTAIN/NO_TRADE، نه عدد تخمینی.
+- **مرز با V6:** V6 §0.4 (قطعی بر LLM مقدم است) و §4-D (Risk Room ورودی entry/invalidation/targets می‌گیرد؛ Verifier آنها را از داده خام بازمحاسبه و VETO می‌کند) را تقویت می‌کند و با هیچ بند صریحی تناقض ندارد. V6 فرمول تولید Entry/SL/TP را تعریف نکرده؛ این فرمول **تصمیم D-4 نیست و تأیید جدا می‌خواهد**.
+- **پیاده‌سازی:** `api/orchestrator/setupEngine.ts`، قاعدهٔ R1: entry=close آخرین کندل؛ invalidation=آخرین swing تأییدشدهٔ سمت محافظ (fractal k=3، REFERENCE از V6 فاز B)؛ targets=swingهای تأییدشدهٔ مقابل به ترتیب نزدیکی؛ هیچ عدد/آستانهٔ جدیدی ندارد (فقط پارامترهای config موجود). R:R/ATR/کارمزد را قضاوت نمی‌کند. بدون ساختار → NO_TRADE؛ داده نامعتبر → ABSTAIN. خروجی با `validateSetupResult` و trace (hash ورودی، زمان swingها، fingerprint config) قابل بررسی است.
+- **وضعیت:** TESTED (تست مستقل `setupEngine.test.ts`، شامل داده واقعی و تست «موتور هیچ اتاق/Verifier/LLM ایمپورت نمی‌کند»). قاعدهٔ R1 به‌عنوان قاعدهٔ استراتژی **در انتظار تأیید شما** است و به Scheduler وصل نشده.
+

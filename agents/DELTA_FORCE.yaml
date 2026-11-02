@@ -1,0 +1,18 @@
+id: DELTA_FORCE
+group: B
+name: Delta Force (trend / range)
+version: "1.0"
+implementation: deterministic
+code_agent_id: DELTA_FORCE
+status: IMPLEMENTED
+slot: "outside the 33 numbered slots (V6 does not number it); needs your approval of a slot"
+mandate: "Turns Delta Force trend/range output into a vote: ULTRA_TREND weighted by deltaUltraWeight, RANGE_DETECTED routed to Range Mode, CONFLICT neutral, WEAK_TREND/ABSTAIN abstain."
+inputs: [ohlcv_4h, ohlcv_1h, ohlcv_15m, ohlcv_5m, config]
+outputs:
+  - {key: verdict, type: "enum[bullish,bearish,neutral,abstain]"}
+  - {key: confidence, type: "float[0,1]"}
+  - {key: evidence_refs, type: list}
+validation: ["no look-ahead", "needs 200 closed candles per timeframe"]
+abstention_rule: "abstain on WEAK_TREND, ABSTAIN, Range Mode too tight, or insufficient history"
+evidence_required: [timestamp, input_hash, output_json, timeframes_evaluated]
+tests: [api/tests/governance.test.ts]

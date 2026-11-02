@@ -1,0 +1,17 @@
+id: B10
+group: B
+name: RSI Regime
+version: "1.0"
+implementation: deterministic
+code_agent_id: B10_RSI
+status: IMPLEMENTED
+mandate: "RSI(14, Wilder) above the bull threshold is bullish, below the bear threshold is bearish (thresholds from governance config agentRsiBull/agentRsiBear), otherwise neutral."
+inputs: [ohlcv_1h, config]
+outputs:
+  - {key: verdict, type: "enum[bullish,bearish,neutral,abstain]"}
+  - {key: confidence, type: "float[0,1]"}
+  - {key: evidence_refs, type: list}
+validation: ["no look-ahead", "Wilder smoothing"]
+abstention_rule: "abstain if fewer candles than RSI(14) needs"
+evidence_required: [timestamp, input_hash, output_json, timeframes_evaluated]
+tests: [api/tests/agents.test.ts]
