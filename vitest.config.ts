@@ -15,6 +15,9 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // The DB_PROBE suites share one PostgreSQL database and some of them cut every other backend (pg_terminate_backend)
+    // to simulate a network failure; running files in parallel makes them kill each other's connections.
+    fileParallelism: false,
     include: ["api/**/*.test.ts", "api/**/*.spec.ts"],
   },
 });
