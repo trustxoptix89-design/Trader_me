@@ -108,3 +108,6 @@ TESTED = تست خودکار سبز در CI. VERIFIED = شاهد اجرای وا
 | PostgreSQL 16.15 محلی، psql واقعی (نه postgres.js) | قرارداد agent_runs، ۲۵ تست | ۲۵/۲۵ پاس (دستی، خارج از مخزن) |
 | داده واقعی fixture (۹۹۹ کندل BTCUSDT 1h) | `agentRuns.test.ts`، `setupEngine.test.ts` | پاس محلی |
 | in-memory / fake executor (دیتابیس واقعی نیست) | `agentRuns.test.ts` (بخش fake)، سایر | پاس |
+
+## اتصال Pipeline (برنامهٔ P0–P7، تأییدشده ۴ نوامبر ۲۰۲۶)
+قرارداد و تصمیم‌ها: `docs/PIPELINE_CONTRACT.md`. وضعیت مراحل (برچسب‌های مجاز): P0 مستند (IMPLEMENTED) · P1 تا P6 در حال اجرا (IN PROGRESS) · P7 NOT STARTED و نیازمند مجوز جدا. ۸/۹ state، اسلات عامل‌ها، Delta Force، B15، R1 و Setup حالت Trend همچنان BLOCKED/تأییدنشده‌اند.
