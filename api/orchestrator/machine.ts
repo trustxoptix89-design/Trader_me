@@ -10,6 +10,7 @@ import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import { DELTA_AGENT_ID, deltaForceVote } from "./deltaAgent";
 import { evaluateEliteCouncil } from "./elite";
 import { dataRoom, errorDetectionRoom, riskRoom, type AgentVote, type RoomResult } from "./rooms";
+import { checkRangeSetupIntegrity } from "../pipeline/setupIntegrity";
 import { buildAgentRunRecords } from "./agentRuns";
 import type { AtomicAgentsRunRecorder } from "../pipeline/agentsRunRecorder";
 import { signalIdFromKey, signalKey } from "../pipeline/signalIdentity";
@@ -232,6 +233,15 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
     trend = evaluateDeltaTrend(input.candles["4H"], input.candles["1H"], input.candles["15m"]);
     if (trend.verdict === "RANGE_DETECTED") range = evaluateDeltaRange(input.candles["4H"], input.candles["5m"]);
     await transition("INDICATORS_READY", trend.verdict, range ? `routed to Range Mode: ${range.verdict}` : trend.reasoning);
+
+    // P4 Setup integrity: in Range Mode the DeltaRange output is the only Setup reference. Any difference rejects the candidate (audited, inconclusive).
+    if (range) {
+      const integrity = checkRangeSetupIntegrity(input.setup, range, direction);
+      if (!integrity.ok) {
+        await emit("ERROR", "INDICATORS_READY", { reason: integrity.code, detail: { code: integrity.code, fields: integrity.fields } });
+        return await finish("inconclusive", integrity.reason, "INDICATORS_READY");
+      }
+    }
 
     // AGENTS_RUN
     const ctx: AgentContext = { candles: input.candles, trend, range };

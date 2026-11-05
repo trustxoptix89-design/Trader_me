@@ -179,17 +179,17 @@ describe("8-state orchestrator (Phase D wiring)", () => {
     expect(bad.status).toBe("rejected");
     expect(calls).toBe(1);
   });
-  it("RANGE_DETECTED is routed to Range Mode: the Delta Force vote comes from the range trigger, not ABSTAIN", async () => {
+  it("RANGE_DETECTED is routed to Range Mode; a hand-made Setup that is not the DeltaRange output is rejected before any agent runs (P4)", async () => {
     const bears = [agent("A1", "bearish"), agent("A2", "bearish"), agent("B1", "bearish"), agent("C1", "bearish")];
     const r = await runSignalPipeline(baseInput("range", bears, shortSetup));
     expect(r.trend?.verdict).toBe("RANGE_DETECTED");
     expect(r.range?.verdict).toBe("RANGE_SHORT");
     expect(r.mode).toBe("range");
-    expect(r.votes[0].verdict).toBe("bearish");
     expect(r.direction).toBe("short");
-    expect(r.approval?.status).toBe("APPROVED"); // all rooms and votes agree...
-    expect(r.status).toBe("inconclusive"); // ...but the Independent Verifier sees 1H candles nowhere near this setup and vetoes
-    expect(r.haltReason).toContain("VERIFIER_VETO");
+    expect(r.status).toBe("inconclusive");
+    expect(r.haltReason).toContain("RANGE_SETUP_MISMATCH");
+    expect(r.votes.length).toBe(0);
+    expect(r.statesVisited).toEqual(["DETECTED", "DATA_VALIDATED", "INDICATORS_READY", "RECORDED"]);
   });
   it("Delta Force CONFLICT halts at RECONCILED (CONTRADICTION_INDICATORS): never reaches the approval vote", async () => {
     const mix = [agent("A1", "bullish"), agent("A2", "bullish"), agent("B1", "bullish"), agent("C1", "bullish"), agent("D1", "bearish")];
