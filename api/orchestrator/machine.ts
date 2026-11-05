@@ -10,6 +10,8 @@ import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import { DELTA_AGENT_ID, deltaForceVote } from "./deltaAgent";
 import { evaluateEliteCouncil } from "./elite";
 import { dataRoom, errorDetectionRoom, riskRoom, type AgentVote, type RoomResult } from "./rooms";
+import type { AtomicDecisionRecorder } from "../pipeline/decisionRecorder";
+import { cycleKey as cycleKeyOf, type Observation } from "../pipeline/signalIdentity";
 import { checkRangeSetupIntegrity } from "../pipeline/setupIntegrity";
 import { buildAgentRunRecords } from "./agentRuns";
 import type { AtomicAgentsRunRecorder } from "../pipeline/agentsRunRecorder";
@@ -78,6 +80,8 @@ export interface PipelineInput {
   notify?: (result: PipelineResult) => Promise<void> | void;
   /** When set, the per-agent run records and the AGENTS_RUN audit event are persisted together through this recorder (one transaction on Postgres). */
   agentRuns?: { recorder: AtomicAgentsRunRecorder; versions?: Record<string, string> };
+  /** When set, the DECISION event, the Setup cycle events and the internal Outbox row are persisted together (one transaction on Postgres). */
+  decision?: { recorder: AtomicDecisionRecorder };
 }
 
 export interface PipelineResult {
@@ -178,9 +182,20 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
     try { events = await store.read(correlationId); } catch { /* reported through auditPersisted */ }
     return { signalId, correlationId, status: "inconclusive", mode: mode(), statesVisited: [...visited], events, votes, trend, range, rooms, approval, verifier, rr, direction, notified: false, duplicate: false, auditPersisted: true, ...extra };
   };
+  /** Identity observation for the cycle store; null when the input has no valid identity (then no cycle is registered). */
+  const observationOf = (): Observation | null => {
+    try {
+      const c = input.candles?.["1H"];
+      if (direction === undefined || lastClosedOpen === undefined || !Array.isArray(c) || !c.length) return null;
+      const sk = signalKey({ symbol: input.symbol, market: input.market, direction, referenceTimeframe: timeframe, lastClosedCandleOpenTime: lastClosedOpen, setup: { entry: input.setup.entry, invalidation: input.setup.invalidation, targets: input.setup.targets, atr: input.setup.atr }, configFingerprint: cfg.fingerprint });
+      return { cycleKey: cycleKeyOf({ symbol: input.symbol, market: input.market, direction, referenceTimeframe: timeframe }), signalKey: sk, direction, setup: { entry: input.setup.entry, invalidation: input.setup.invalidation, targets: [...input.setup.targets], atr: input.setup.atr }, closedCandleOpenTime: lastClosedOpen, lastClosedClose: c[c.length - 1].close };
+    } catch { return null; }
+  };
   const finish = async (status: SignalStatus, reason: string | undefined, fromState: PipelineState): Promise<PipelineResult> => {
     if (visited[visited.length - 1] !== "RECORDED") await transition("RECORDED", status, reason ?? "approved");
-    const fresh = await emit("DECISION", "RECORDED", { decision: status, reason: reason ?? "approved", detail: { fromState } });
+    const rec = input.decision?.recorder;
+    const via = rec ? async (e: AuditEvent) => (await rec.record(e, { approved: status === "approved", observation: observationOf(), now: input.now })).audit : undefined;
+    const fresh = await emit("DECISION", "RECORDED", { decision: status, reason: reason ?? "approved", detail: { fromState } }, via);
     decided = { status, reason };
     // A concurrent run with the same correlation id already persisted the decision: this one is a duplicate and must not notify.
     return snapshot({ status, haltReason: reason, duplicate: !fresh });
