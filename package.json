@@ -14,7 +14,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:migrate": "tsx api/queries/migrate-cli.ts"
+    "db:migrate": "tsx api/queries/migrate-cli.ts",
+    "pipeline:run": "tsx api/pipeline/cli.ts"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "2.0.78",

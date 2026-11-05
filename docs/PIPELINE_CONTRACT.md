@@ -35,6 +35,8 @@
 | 5m | 30 | Delta Range | `deltaforce.range.ts` |
 هر عدد با تست «n−1 ← ABSTAIN و n ← مجاز» به رفتار واقعی کد گره می‌خورد. سقف ۲۰۰ کندل `ingest` بدون این محاسبه افزایش نمی‌یابد. حداقل عمق خواندن = لازم + ۱ (کندل در حال تشکیل).
 
+**یافته (P6):** RSI/StochRSI ویلدر به طول تاریخچه وابسته‌اند؛ روی fixture ۵ دقیقه‌ای، تریگر Range با ۴۰ کندل فعال می‌شود ولی با کوتاه‌ترین خواندن مجاز (۳۱ ردیف) فعال نمی‌شود. یعنی «حداقل برای NaN نبودن» با «عمق لازم برای نتیجهٔ پایدار» یکی نیست. عمق مرجع در V6 تعریف نشده و اختراع نشد؛ ورودی دقیق هر اجرا در `inputDataHash` ثبت می‌شود. **باز:** تعیین عمق خواندن مرجع ۵m (و سایر TFها) نیاز به تصمیم کاربر دارد.
+
 ## ۴. هویت سیگنال و چرخهٔ Setup
 - **signalKey**: `sha256(canonical{contract:1, symbol, market, direction, referenceTimeframe:"1H", lastClosedCandleOpenTime, setupFingerprint, configFingerprint})`. `now` در آن نیست.
 - **cycleKey**: `sha256(canonical{symbol, market, direction, referenceTimeframe})`.
@@ -70,3 +72,16 @@ CLI یا اجرای داخلی کنترل‌شده. بدون endpoint عمومی
 | Bybit v5 market | funding | UNKNOWN | UNKNOWN |
 | Hyperliquid info API | funding، OI | UNKNOWN | UNKNOWN |
 هیچ‌کدام انتخاب نشد. Futures در P6 فقط با منبع تأییدشده فعال می‌شود؛ وگرنه BLOCKED می‌ماند و فقط Spot اجرا می‌شود.
+
+## ۱۰. وضعیت مراحل (۵ نوامبر ۲۰۲۶)
+| مرحله | وضعیت | شاهد |
+|---|---|---|
+| P0 قرارداد | IMPLEMENTED (مستند) | همین سند |
+| P1 آداپتور کندل | TESTED | CI سبز، PG 17.11 |
+| P2 هویت و چرخهٔ Setup | TESTED | CI run 42002822718 |
+| P3 تراکنش agent_runs + audit، reconcile | TESTED | CI run 42003385005 |
+| P4 یکپارچگی Setup (Range) | TESTED | CI run 42012971981 |
+| P5 Outbox داخلی (فقط log) | IMPLEMENTED تا سبز شدن CI | commit c7e35c2 |
+| P6 Runner CLI + گارد State machine | IMPLEMENTED تا سبز شدن CI | تست‌های SYNTHETIC |
+| P7 Scheduler | NOT STARTED (نیازمند مجوز جدا) | — |
+BLOCKED: تعداد state (۸ یا ۹)، Futures (منبع داده انتخاب نشده)، Setup حالت Trend، عمق خواندن مرجع ۵m، اجرای Spot روی داده زندهٔ ۴-تایم‌فریم (بدون شبکه/DB داده در این محیط).
