@@ -10,6 +10,7 @@ import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import { DELTA_AGENT_ID, deltaForceVote } from "./deltaAgent";
 import { evaluateEliteCouncil } from "./elite";
 import { dataRoom, errorDetectionRoom, riskRoom, type AgentVote, type RoomResult } from "./rooms";
+import { signalIdFromKey, signalKey } from "../pipeline/signalIdentity";
 import { independentVerifier, type VerifierResult } from "./verifier";
 
 /** The pipeline states of the specification (Phase D), in order. POST_MORTEM happens after an outcome and is not part of this run. */
@@ -113,7 +114,17 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
   const cfg = input.config ?? DEFAULT_GOVERNANCE_CONFIG;
   const store = input.audit ?? new InMemoryAuditStore();
   const timeframe = input.timeframe ?? "1H";
-  const signalId = `${input.symbol}-${input.now}-${sha({ s: input.setup, m: input.market, tf: timeframe, c: cfg.fingerprint }).slice(0, 8)}`;
+  const direction: "long" | "short" | undefined = !finiteNums(input.setup?.entry) || !Array.isArray(input.setup?.targets) || !finiteNums(input.setup.targets[0]) ? undefined : input.setup.targets[0] > input.setup.entry ? "long" : "short";
+  /** Deterministic identity (P2): no `now`; same market/direction/setup/closed candle/config => same id. Malformed input falls back to the legacy hash so it is still audited. */
+  const lastClosedOpen = (() => { const c = input.candles?.[timeframe as "1H"]; const t = Array.isArray(c) && c.length ? c[c.length - 1]?.time : undefined; return typeof t === "number" ? t : undefined; })();
+  const signalId = (() => {
+    try {
+      if (direction === undefined || lastClosedOpen === undefined) throw new Error("no identity");
+      return signalIdFromKey(signalKey({ symbol: input.symbol, market: input.market, direction, referenceTimeframe: timeframe, lastClosedCandleOpenTime: lastClosedOpen, setup: { entry: input.setup.entry, invalidation: input.setup.invalidation, targets: input.setup.targets, atr: input.setup.atr }, configFingerprint: cfg.fingerprint }));
+    } catch {
+      return `${input.symbol}-${input.now}-${sha({ s: input.setup, m: input.market, tf: timeframe, c: cfg.fingerprint }).slice(0, 8)}`;
+    }
+  })();
   const correlationId = signalId;
 
   const visited: PipelineState[] = [];
@@ -131,7 +142,6 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
   let decided: { status: SignalStatus; reason?: string } | undefined;
   let seq = 0;
 
-  const direction: "long" | "short" | undefined = !finiteNums(input.setup?.entry) || !Array.isArray(input.setup?.targets) || !finiteNums(input.setup.targets[0]) ? undefined : input.setup.targets[0] > input.setup.entry ? "long" : "short";
   let inputDataHash = "unhashable";
   try { inputDataHash = sha({ symbol: input.symbol, now: input.now, tf: TIMEFRAMES.map((t) => (input.candles?.[t] ?? []).map((c) => [c.time, c.open, c.high, c.low, c.close, c.volume])) }); } catch { /* recorded as "unhashable" */ }
 
