@@ -81,7 +81,7 @@ CLI یا اجرای داخلی کنترل‌شده. بدون endpoint عمومی
 | P2 هویت و چرخهٔ Setup | TESTED | CI run 42002822718 |
 | P3 تراکنش agent_runs + audit، reconcile | TESTED | CI run 42003385005 |
 | P4 یکپارچگی Setup (Range) | TESTED | CI run 42012971981 |
-| P5 Outbox داخلی (فقط log) | IMPLEMENTED تا سبز شدن CI | commit c7e35c2 |
-| P6 Runner CLI + گارد State machine | IMPLEMENTED تا سبز شدن CI | تست‌های SYNTHETIC |
+| P5 Outbox داخلی (فقط log) | TESTED | CI run 42092683207، PG 17.11 |
+| P6 Runner CLI + گارد State machine | TESTED (داده SYNTHETIC؛ اجرای زنده BLOCKED) | CI run 42093306727، PG 17.11 |
 | P7 Scheduler | NOT STARTED (نیازمند مجوز جدا) | — |
 BLOCKED: تعداد state (۸ یا ۹)، Futures (منبع داده انتخاب نشده)، Setup حالت Trend، عمق خواندن مرجع ۵m، اجرای Spot روی داده زندهٔ ۴-تایم‌فریم (بدون شبکه/DB داده در این محیط).
