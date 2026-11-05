@@ -1,7 +1,11 @@
 import { AuditSequenceError, GENESIS_HASH, hashEvent, normalizeEvent, verifyChainOf, type AuditEvent, type AuditStore, type ChainVerification, type StoredAuditEvent } from "./audit";
 
 /** The only database capability the store needs: one parameterised statement returning rows. No multi-statement transaction is required (see append). */
-export interface SqlExecutor { query(text: string, params?: unknown[]): Promise<Record<string, unknown>[]> }
+export interface SqlExecutor {
+  query(text: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
+  /** Runs `fn` in ONE database transaction (all statements commit together or roll back together). Absent on executors that cannot guarantee it. */
+  transaction?<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T>;
+}
 
 /** Production adapter over the shared postgres.js client (same connection the migrations and the rest of the API use). Loaded lazily so importing the store needs no database driver. */
 export function postgresJsExecutor(): SqlExecutor {
@@ -9,6 +13,11 @@ export function postgresJsExecutor(): SqlExecutor {
     query: async (text, params = []) => {
       const { getSql } = await import("../queries/connection");
       return (await getSql().unsafe(text, params as never)) as unknown as Record<string, unknown>[];
+    },
+    transaction: async <T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> => {
+      const { getSql } = await import("../queries/connection");
+      const sql = getSql() as unknown as { begin<R>(cb: (tx: { unsafe(t: string, p: unknown[]): Promise<unknown> }) => Promise<R>): Promise<R> };
+      return sql.begin((tx) => fn({ query: async (text, params = []) => (await tx.unsafe(text, params)) as Record<string, unknown>[] }));
     },
   };
 }

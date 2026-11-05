@@ -10,6 +10,8 @@ import { DEFAULT_GOVERNANCE_CONFIG, type GovernanceConfig } from "./config";
 import { DELTA_AGENT_ID, deltaForceVote } from "./deltaAgent";
 import { evaluateEliteCouncil } from "./elite";
 import { dataRoom, errorDetectionRoom, riskRoom, type AgentVote, type RoomResult } from "./rooms";
+import { buildAgentRunRecords } from "./agentRuns";
+import type { AtomicAgentsRunRecorder } from "../pipeline/agentsRunRecorder";
 import { signalIdFromKey, signalKey } from "../pipeline/signalIdentity";
 import { independentVerifier, type VerifierResult } from "./verifier";
 
@@ -73,6 +75,8 @@ export interface PipelineInput {
   /** Durable audit store. Defaults to an in-memory store (NOT durable): production callers must pass PostgresAuditStore. */
   audit?: AuditStore;
   notify?: (result: PipelineResult) => Promise<void> | void;
+  /** When set, the per-agent run records and the AGENTS_RUN audit event are persisted together through this recorder (one transaction on Postgres). */
+  agentRuns?: { recorder: AtomicAgentsRunRecorder; versions?: Record<string, string> };
 }
 
 export interface PipelineResult {
@@ -146,21 +150,21 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
   try { inputDataHash = sha({ symbol: input.symbol, now: input.now, tf: TIMEFRAMES.map((t) => (input.candles?.[t] ?? []).map((c) => [c.time, c.open, c.high, c.low, c.close, c.volume])) }); } catch { /* recorded as "unhashable" */ }
 
   /** Returns true when this call stored the event, false when an identical event (same idempotency key) already existed. */
-  const emit = async (kind: AuditKind, state: PipelineState | null, extra: Partial<AuditEvent> = {}): Promise<boolean> => {
+  const emit = async (kind: AuditKind, state: PipelineState | null, extra: Partial<AuditEvent> = {}, via?: (e: AuditEvent) => Promise<StoredAuditEvent | null>): Promise<boolean> => {
     const event: AuditEvent = {
       correlationId, seq, kind, state, symbol: input.symbol, timeframe, timestamp: input.now, inputDataHash, dataFreshnessMs: freshnessMs, dataValid,
       roomVerdicts: { ...roomVerdicts }, riskResult, verifierResult: verifier ?? null, decision: null, reason: null,
       configVersion: cfg.version, configFingerprint: cfg.fingerprint, idempotencyKey: `${correlationId}:${seq}:${kind}`, detail: null, ...extra,
     };
-    const stored = await store.append(event);
+    const stored = await (via ? via(event) : store.append(event));
     seq++;
     return stored !== null;
   };
-  const transition = async (to: PipelineState, verdict: string, reason: string): Promise<void> => {
+  const transition = async (to: PipelineState, verdict: string, reason: string, more?: { detail?: Record<string, unknown>; via?: (e: AuditEvent) => Promise<StoredAuditEvent | null> }): Promise<void> => {
     const from = visited.length ? visited[visited.length - 1] : null;
     if (!isAllowedTransition(from, to)) throw new Error(`FORBIDDEN_TRANSITION ${from ?? "START"} -> ${to}`);
     visited.push(to);
-    await emit("STATE_TRANSITION", to, { reason, detail: { from, to, verdict } });
+    await emit("STATE_TRANSITION", to, { reason, detail: { from, to, verdict, ...(more?.detail ?? {}) } }, more?.via);
   };
   const roomEvent = async (r: RoomResult, state: PipelineState): Promise<void> => {
     rooms.push(r);
@@ -237,7 +241,13 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
       return w !== undefined && v.agentId !== DELTA_AGENT_ID ? { ...v, weight: w } : v;
     });
     votes = [deltaForceVote(trend, range, cfg), ...others];
-    await transition("AGENTS_RUN", "OK", `${votes.length} votes`);
+    if (input.agentRuns) {
+      const rec = input.agentRuns.recorder;
+      const runs = buildAgentRunRecords({ signalId, runAt: input.now, candles: input.candles, votes, versions: input.agentRuns.versions });
+      await transition("AGENTS_RUN", "OK", `${votes.length} votes`, { detail: { agentRunKeys: runs.map((r) => r.idempotencyKey).sort() }, via: async (e) => (await rec.record(runs, e)).audit });
+    } else {
+      await transition("AGENTS_RUN", "OK", `${votes.length} votes`);
+    }
 
     // RECONCILED (Error Detection Room + Chart Quality Room)
     const err = errorDetectionRoom(votes, input.candles["1H"][input.candles["1H"].length - 1], trend);
