@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultAgents, identify, structureAgent } from "../orchestrator/agents";
+import { defaultAgents, identify, structureAgent, validateVote } from "../orchestrator/agents";
 import { InMemoryAgentRunStore } from "../orchestrator/agentRuns";
 import { InMemoryAuditStore } from "../orchestrator/audit";
 import { runSignalPipeline } from "../orchestrator/machine";
@@ -34,7 +34,7 @@ describe("agent failure accountability", () => {
   }
 
   it("a vote signed with another agent's id is rejected as AGENT_IDENTITY_MISMATCH", async () => {
-    const spoof = identify("B09_EMA_TREND", "B", (ctx) => ({ ...structureAgent(ctx), agentId: "A01_STRUCTURE" }));
+    const spoof = identify("B09_EMA_TREND", "B", (ctx) => ({ ...structureAgent(ctx), group: "B", agentId: "A01_STRUCTURE" }));
     const audit = new InMemoryAuditStore(), runs = new InMemoryAgentRunStore();
     const r = await runSignalPipeline({ ...baseInput("up", [spoof]), symbol: "ACC-SPOOF", audit, agentRuns: { recorder: new SequentialAgentsRunRecorder(audit, runs), versions } });
     expect(r.status).toBe("inconclusive");
@@ -78,5 +78,30 @@ describe("agent failure accountability", () => {
     const rows = await runs.listBySignal(r.signalId);
     expect(rows.length).toBe(7);
     expect(rows.some((x) => x.validationOutcome === "ERROR")).toBe(false);
+  });
+
+  const bads: Array<[string, Record<string, unknown>, string]> = [
+    ["unknown verdict", { verdict: "buy" }, "verdict buy is not allowed"],
+    ["NaN confidence", { confidence: Number.NaN }, "confidence must be"],
+    ["confidence above 1", { confidence: 2 }, "confidence must be"],
+    ["negative weight", { weight: -1 }, "weight must be"],
+    ["group differs from declared", { group: "Z" }, "differs from declared"],
+    ["missing reason", { reason: undefined }, "reason must be a string"],
+  ];
+  for (const [name, patch, msg] of bads) {
+    it(`invalid output (${name}) is rejected as AGENT_INVALID_OUTPUT and persisted as ERROR`, async () => {
+      const bad = identify("B11_MACD", "B", (ctx) => ({ ...defaultAgents()[3](ctx), ...patch }) as never);
+      const audit = new InMemoryAuditStore(), runs = new InMemoryAgentRunStore();
+      const r = await runSignalPipeline({ ...baseInput("up", [bad]), symbol: `ACC-BAD-${name.replace(/ /g, "")}`, audit, agentRuns: { recorder: new SequentialAgentsRunRecorder(audit, runs), versions } });
+      expect(r.status).toBe("inconclusive");
+      expect(r.haltReason).toBe("AGENT_FAILURE: B11_MACD");
+      const row = (await runs.listBySignal(r.signalId)).find((x) => x.agentId === "B11_MACD");
+      expect(row?.validationOutcome).toBe("ERROR");
+      expect(row?.error).toContain(msg);
+    });
+  }
+  it("validateVote accepts every healthy default agent output", () => {
+    expect(validateVote({ agentId: "A", group: "A", verdict: "neutral", confidence: 0, weight: 1, reason: "" })).toEqual([]);
+    expect(validateVote(null)).toEqual(["vote is not an object"]);
   });
 });

@@ -14,7 +14,7 @@ import type { AtomicDecisionRecorder } from "../pipeline/decisionRecorder";
 import { cycleKey as cycleKeyOf, type Observation } from "../pipeline/signalIdentity";
 import { checkRangeSetupIntegrity } from "../pipeline/setupIntegrity";
 import { AGENT_TIMEFRAMES, buildAgentRunRecords, type AgentFailure } from "./agentRuns";
-import type { IdentifiedAgent } from "./agents";
+import { validateVote, type IdentifiedAgent } from "./agents";
 import type { AtomicAgentsRunRecorder } from "../pipeline/agentsRunRecorder";
 import { signalIdFromKey, signalKey } from "../pipeline/signalIdentity";
 import { independentVerifier, type VerifierResult } from "./verifier";
@@ -271,6 +271,8 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
       const meta = run as Partial<IdentifiedAgent>;
       try {
         const v = run(ctx);
+        const bad = validateVote(v, meta.agentGroup);
+        if (bad.length) throw new Error(`AGENT_INVALID_OUTPUT: ${bad.join("; ")}`);
         if (meta.agentId !== undefined && v.agentId !== meta.agentId) throw new Error(`AGENT_IDENTITY_MISMATCH: declared ${meta.agentId}, vote signed ${String(v.agentId)}`);
         if (seenIds.has(v.agentId)) throw new Error(`AGENT_DUPLICATE_ID: ${v.agentId}`);
         seenIds.add(v.agentId);

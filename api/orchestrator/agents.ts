@@ -11,6 +11,20 @@ import type { AgentVote, VoteVerdict } from "./rooms";
 export type Agent = (ctx: AgentContext) => AgentVote;
 /** An agent with a stable identity. The machine uses it to attribute failures and to reject votes signed with another id. */
 export type IdentifiedAgent = Agent & { readonly agentId: string; readonly agentGroup: string };
+/** Output contract of every agent. Returns the violations (empty = valid). An invalid vote is a failure, never a silent pass. */
+export function validateVote(v: unknown, expectedGroup?: string): string[] {
+  const p: string[] = [];
+  const x = v as Partial<AgentVote> | null;
+  if (typeof x !== "object" || x === null) return ["vote is not an object"];
+  if (typeof x.agentId !== "string" || x.agentId.length === 0) p.push("agentId must be a non-empty string");
+  if (typeof x.group !== "string" || x.group.length === 0) p.push("group must be a non-empty string");
+  else if (expectedGroup !== undefined && x.group !== expectedGroup) p.push(`group ${x.group} differs from declared ${expectedGroup}`);
+  if (x.verdict !== "bullish" && x.verdict !== "bearish" && x.verdict !== "neutral" && x.verdict !== "abstain") p.push(`verdict ${String(x.verdict)} is not allowed`);
+  if (typeof x.confidence !== "number" || !Number.isFinite(x.confidence) || x.confidence < 0 || x.confidence > 1) p.push("confidence must be a finite number in [0,1]");
+  if (typeof x.weight !== "number" || !Number.isFinite(x.weight) || x.weight < 0) p.push("weight must be a finite number >= 0");
+  if (typeof x.reason !== "string") p.push("reason must be a string");
+  return p;
+}
 export const identify = (agentId: string, agentGroup: string, run: Agent): IdentifiedAgent => Object.assign((ctx: AgentContext) => run(ctx), { agentId, agentGroup });
 
 const vote = (agentId: string, group: string, verdict: VoteVerdict, confidence: number, reason: string): AgentVote => ({ agentId, group, verdict, confidence, weight: 1, reason });

@@ -88,3 +88,5 @@ BLOCKED: تعداد state (۸ یا ۹)، Futures (منبع داده انتخاب
 - شناسهٔ تکراری ردیف جدید نمی‌سازد (برخورد با کلید idempotency ردیف OK)؛ فقط در detail ثبت می‌شود.
 - تکرار ورودی یکسان = duplicate بدون ردیف اضافه. تست‌ها: `api/tests/agentAccountability.test.ts` (به‌ازای هر ۶ Agent + spoof + duplicate + anonymous + retry).
 - محدودیت: اتمی‌بودن روی PG همان P3 است (`agentsRunRecorder.postgres.test.ts`)؛ تست PG اختصاصی ERROR هنوز اضافه نشده.
+- قرارداد خروجی (`validateVote`): verdict در {bullish,bearish,neutral,abstain}، confidence عدد متناهی در [0,1]، weight متناهی ≥ 0، reason رشته، group برابر group اعلام‌شده. تخطی = `AGENT_INVALID_OUTPUT` (ردیف ERROR، توقف inconclusive).
+- Timeout/Retry: Agentهای فعلی توابع همزمانِ قطعی‌اند؛ تکرار با ورودی یکسان خروجی یکسان می‌دهد، پس Retry بی‌اثر و عمداً وجود ندارد؛ Timeout برای تابع همزمان قابل اجرا نیست (NOT_IMPLEMENTED تا وجود Agent ناهمزمان/شبکه‌ای).
