@@ -13,7 +13,8 @@ import { dataRoom, errorDetectionRoom, riskRoom, type AgentVote, type RoomResult
 import type { AtomicDecisionRecorder } from "../pipeline/decisionRecorder";
 import { cycleKey as cycleKeyOf, type Observation } from "../pipeline/signalIdentity";
 import { checkRangeSetupIntegrity } from "../pipeline/setupIntegrity";
-import { buildAgentRunRecords } from "./agentRuns";
+import { AGENT_TIMEFRAMES, buildAgentRunRecords, type AgentFailure } from "./agentRuns";
+import type { IdentifiedAgent } from "./agents";
 import type { AtomicAgentsRunRecorder } from "../pipeline/agentsRunRecorder";
 import { signalIdFromKey, signalKey } from "../pipeline/signalIdentity";
 import { independentVerifier, type VerifierResult } from "./verifier";
@@ -64,7 +65,7 @@ export interface PipelineInput {
   /** Chart claims (S/R levels, BOS and sweep markers) checked by the Chart Quality Room. */
   chart?: ChartClaims;
   /** Other deterministic agents. Delta Force is always run by the machine itself. */
-  agents?: Array<(ctx: AgentContext) => AgentVote>;
+  agents?: Array<((ctx: AgentContext) => AgentVote) | IdentifiedAgent>;
   /** Learned agent weights (post-mortem). They never override the Delta Force ULTRA_TREND weight. */
   weights?: Record<string, number>;
   source?: string;
@@ -260,18 +261,44 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
 
     // AGENTS_RUN
     const ctx: AgentContext = { candles: input.candles, trend, range };
-    const others = (input.agents ?? []).map((run) => {
-      const v = run(ctx);
-      const w = input.weights?.[v.agentId];
-      return w !== undefined && v.agentId !== DELTA_AGENT_ID ? { ...v, weight: w } : v;
+    // Agent accountability: every agent runs inside its own try/catch. A failure, a vote signed with another id or a duplicate id is a
+    // structured ERROR (never a silent skip) and the pipeline halts as inconclusive: a failed agent can never lead to an approved decision.
+    const others: AgentVote[] = [];
+    const failures: AgentFailure[] = [];
+    const unidentified: string[] = [];
+    const seenIds = new Set<string>([DELTA_AGENT_ID]);
+    (input.agents ?? []).forEach((run, i) => {
+      const meta = run as Partial<IdentifiedAgent>;
+      try {
+        const v = run(ctx);
+        if (meta.agentId !== undefined && v.agentId !== meta.agentId) throw new Error(`AGENT_IDENTITY_MISMATCH: declared ${meta.agentId}, vote signed ${String(v.agentId)}`);
+        if (seenIds.has(v.agentId)) throw new Error(`AGENT_DUPLICATE_ID: ${v.agentId}`);
+        seenIds.add(v.agentId);
+        const w = input.weights?.[v.agentId];
+        others.push(w !== undefined && v.agentId !== DELTA_AGENT_ID ? { ...v, weight: w } : v);
+      } catch (e) {
+        const message = (e instanceof Error ? e.message : String(e)).slice(0, 500);
+        if (meta.agentId !== undefined && meta.agentGroup !== undefined) failures.push({ agentId: meta.agentId, agentGroup: meta.agentGroup, message });
+        else unidentified.push(`UNIDENTIFIED_AGENT#${i}: ${message}`);
+      }
     });
     votes = [deltaForceVote(trend, range, cfg), ...others];
+    const failed = failures.length > 0 || unidentified.length > 0;
     if (input.agentRuns) {
       const rec = input.agentRuns.recorder;
-      const runs = buildAgentRunRecords({ signalId, runAt: input.now, candles: input.candles, votes, versions: input.agentRuns.versions });
-      await transition("AGENTS_RUN", "OK", `${votes.length} votes`, { detail: { agentRunKeys: runs.map((r) => r.idempotencyKey).sort() }, via: async (e) => (await rec.record(runs, e)).audit });
+      // Only agents with a declared input contract can be persisted as runs; anything else is reported in the event detail, never invented as a row.
+      const voted = new Set(votes.map((v) => v.agentId));
+      const persistable = failures.filter((f) => AGENT_TIMEFRAMES[f.agentId] !== undefined && !voted.has(f.agentId)); // a duplicate id would collide with the stored OK run
+      const runs = buildAgentRunRecords({ signalId, runAt: input.now, candles: input.candles, votes, failures: persistable, versions: input.agentRuns.versions });
+      const detail = { agentRunKeys: runs.map((r) => r.idempotencyKey).sort(), ...(failed ? { failedAgents: failures.map((f) => ({ agentId: f.agentId, error: f.message })), unidentifiedFailures: unidentified } : {}) };
+      await transition("AGENTS_RUN", failed ? "ERROR" : "OK", failed ? `${failures.length + unidentified.length} agent failure(s)` : `${votes.length} votes`, { detail, via: async (e) => (await rec.record(runs, e)).audit });
     } else {
-      await transition("AGENTS_RUN", "OK", `${votes.length} votes`);
+      await transition("AGENTS_RUN", failed ? "ERROR" : "OK", failed ? `${failures.length + unidentified.length} agent failure(s)` : `${votes.length} votes`);
+    }
+    if (failed) {
+      const ids = [...failures.map((f) => f.agentId), ...unidentified.map((u) => u.split(":")[0])];
+      await emit("ERROR", "AGENTS_RUN", { reason: "AGENT_FAILURE", detail: { failedAgents: failures, unidentifiedFailures: unidentified } });
+      return await finish("inconclusive", `AGENT_FAILURE: ${ids.join(", ")}`.slice(0, 200), "AGENTS_RUN");
     }
 
     // RECONCILED (Error Detection Room + Chart Quality Room)

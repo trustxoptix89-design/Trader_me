@@ -224,7 +224,7 @@ describe("8-state orchestrator (Phase D wiring)", () => {
     const boom = (): AgentVote => { throw new Error("agent exploded"); };
     const r = await runSignalPipeline(baseInput("up", [boom]));
     expect(r.status).toBe("inconclusive");
-    expect(r.haltReason).toContain("PIPELINE_ERROR");
+    expect(r.haltReason).toContain("AGENT_FAILURE");
   });
   it("is reproducible: same input -> same audit hash chain", async () => {
     const a = await runSignalPipeline(baseInput("up", bulls));

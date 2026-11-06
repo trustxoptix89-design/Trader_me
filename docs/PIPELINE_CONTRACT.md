@@ -78,3 +78,13 @@ CLI یا اجرای داخلی کنترل‌شده. بدون endpoint عمومی
 | P6 Runner CLI + گارد State machine | TESTED (داده SYNTHETIC؛ اجرای زنده BLOCKED) | CI run 42093306727، PG 17.11 |
 | P7 Scheduler | NOT STARTED (نیازمند مجوز جدا) | — |
 BLOCKED: تعداد state (۸ یا ۹)، Futures (منبع داده انتخاب نشده)، Setup حالت Trend، عمق خواندن مرجع ۵m، اجرای Spot روی داده زندهٔ ۴-تایم‌فریم (بدون شبکه/DB داده در این محیط).
+
+## 11. مسئولیت‌پذیری خطای Agent (P-next)
+
+- هر Agent هویت پایدار دارد (`identify(agentId, group, fn)`؛ `defaultAgents()` همگی هویت‌دارند).
+- ماشین هر Agent را در try/catch جدا اجرا می‌کند. خطا، رأیِ امضاشده با شناسهٔ دیگر (`AGENT_IDENTITY_MISMATCH`) یا شناسهٔ تکراری (`AGENT_DUPLICATE_ID`) = خطای ساختاریافته.
+- در صورت خطا: ردیف `agent_runs` با `validation_outcome=ERROR` و `error` برای همان Agent (همراه با رأی‌های موفق، اتمی با رویداد AGENTS_RUN با verdict=ERROR)، سپس رویداد ERROR و `finish(inconclusive, "AGENT_FAILURE: <ids>")`. هرگز approved نمی‌شود و اعلان ارسال نمی‌شود.
+- Agent بدون هویت (تابع ناشناس) که خطا دهد: هویت و ردیف جعلی ساخته نمی‌شود؛ فقط در detail رویداد با `UNIDENTIFIED_AGENT#i` ثبت می‌شود.
+- شناسهٔ تکراری ردیف جدید نمی‌سازد (برخورد با کلید idempotency ردیف OK)؛ فقط در detail ثبت می‌شود.
+- تکرار ورودی یکسان = duplicate بدون ردیف اضافه. تست‌ها: `api/tests/agentAccountability.test.ts` (به‌ازای هر ۶ Agent + spoof + duplicate + anonymous + retry).
+- محدودیت: اتمی‌بودن روی PG همان P3 است (`agentsRunRecorder.postgres.test.ts`)؛ تست PG اختصاصی ERROR هنوز اضافه نشده.

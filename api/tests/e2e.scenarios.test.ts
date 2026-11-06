@@ -139,10 +139,10 @@ describe.each(stores)("8 end-to-end scenarios [%s audit store]", (name, makeStor
     assertAuditInvariants(r);
   });
 
-  it("8a. Computation error (an agent throws) -> inconclusive PIPELINE_ERROR, error and decision recorded", async () => {
+  it("8a. Computation error (an agent throws) -> inconclusive AGENT_FAILURE (unidentified agent), error and decision recorded", async () => {
     const r = await go(input("up", "err", { agents: [() => { throw new Error("indicator exploded"); }] }));
     expect(r.status).toBe("inconclusive");
-    expect(r.haltReason).toContain("PIPELINE_ERROR");
+    expect(r.haltReason).toContain("AGENT_FAILURE");
     expect(kinds(r, "ERROR")).toHaveLength(1);
     assertAuditInvariants(r);
   });
