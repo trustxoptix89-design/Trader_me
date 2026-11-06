@@ -27,5 +27,5 @@
 2. ingest برای BTCUSDT در ۴ تایم‌فریم (4h,1h,15m,5m) از منبع در دسترس؛ چون سقف ۲۰۰ است، تا رسیدن به ≥ MIN_CLOSED_CANDLES (360/360/360/120 کندل بسته) تکرار شود.
 3. `DB_PROBE=true npx vitest run api/tests/candleReader.postgres.test.ts` برای تأیید خواندن.
 4. `npx tsx api/pipeline/cli.ts --symbol BTCUSDT --market spot` و ذخیرهٔ JSON خروجی.
-5. بررسی SQL: `signal_decisions` (یا جدول DECISION)، `agent_runs` (۷ ردیف OK یا ERROR مشخص)، `notification_outbox` (فقط برای approved).
+5. بررسی SQL: رویداد DECISION در `audit_log` (kind=DECISION)، `agent_runs` (۷ ردیف OK یا ERROR مشخص)، `notification_outbox` (فقط برای approved).
 برچسب داده را در گزارش بنویسید: تا اجرای واقعی، همه‌چیز SYNTHETIC است.
