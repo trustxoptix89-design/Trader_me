@@ -65,3 +65,21 @@ export function fiveMinuteBearishFvg(): Candle[] {
   out.push(candle(i++, step, prev - 0.1, prev - 0.15, 0.01)); // bar[-1] gaps below bar[-3].low (= prev - 0.01)
   return out;
 }
+
+/**
+ * Same final shape as fiveMinuteBearishFvg() (decline, strong rally, bearish FVG) preceded by `pre` bars of a quiet alternating oscillation, so the
+ * series is long enough for the measured 5m history requirement (docs/HISTORY_DEPTH.md). SYNTHETIC.
+ */
+export function fiveMinuteBearishFvgLong(pre: number, rallyScale = 1, c2Delta = -0.05, lastClose = -0.15): Candle[] {
+  const step = 300_000, out: Candle[] = [];
+  let prev = 100, i = 0;
+  for (let j = 0; j < pre; j++, i++) { const close = prev + (j % 2 === 0 ? 0.05 : -0.05); out.push(candle(i, step, prev, close, 0.02)); prev = close; }
+  for (let j = 0; j < 20; j++, i++) { const close = prev - 0.2; out.push(candle(i, step, prev, close, 0.05)); prev = close; }
+  for (let j = 0; j < 17; j++, i++) { const close = prev + 0.9 * rallyScale * (1 + j * 0.08); out.push(candle(i, step, prev, close, 0.05)); prev = close; }
+  const c3Close = prev + 0.3;
+  out.push(candle(i++, step, prev, c3Close, 0.01));
+  const c2Close = c3Close + c2Delta;
+  out.push(candle(i++, step, c3Close, c2Close, 0.01));
+  out.push(candle(i++, step, prev - 0.1, prev + lastClose, 0.01));
+  return out;
+}

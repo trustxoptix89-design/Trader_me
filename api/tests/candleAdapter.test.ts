@@ -30,7 +30,7 @@ describe("candle adapter: constants", () => {
     expect([...PIPELINE_TIMEFRAMES]).toEqual(["4H", "1H", "15m", "5m"]);
     expect(DB_TIMEFRAME).toEqual({ "4H": "4h", "1H": "1h", "15m": "15m", "5m": "5m" });
     expect(TF_MS).toEqual({ "4H": 14_400_000, "1H": 3_600_000, "15m": 900_000, "5m": 300_000 });
-    expect(MIN_CLOSED_CANDLES).toEqual({ "4H": 200, "1H": 200, "15m": 200, "5m": 30 });
+    expect(MIN_CLOSED_CANDLES).toEqual({ "4H": 360, "1H": 360, "15m": 360, "5m": 120 }); // measured: docs/HISTORY_DEPTH.md
     expect(READ_MARGIN).toBe(1);
   });
 });
@@ -100,7 +100,7 @@ describe("candle adapter: closed-candle rule (HISTORICAL-REAL and SYNTHETIC)", (
 describe("candle adapter: sufficiency and the pipeline input (SYNTHETIC grids)", () => {
   const full = (n: Record<PipelineTimeframe, number>, over?: (tf: PipelineTimeframe) => ((i: number, c: StoredCandle) => StoredCandle) | undefined): Record<PipelineTimeframe, StoredCandle[]> =>
     Object.fromEntries(PIPELINE_TIMEFRAMES.map((tf) => [tf, grid(tf, n[tf], lastClosedOpen(tf), over?.(tf))])) as Record<PipelineTimeframe, StoredCandle[]>;
-  const exact = { "4H": 200, "1H": 200, "15m": 200, "5m": 30 };
+  const exact = { ...MIN_CLOSED_CANDLES };
 
   it("READY with exactly the required closed candles; 4 timeframes, ascending, closeTime set", () => {
     const r = buildPipelineCandles(full(exact), NOW);
@@ -113,27 +113,27 @@ describe("candle adapter: sufficiency and the pipeline input (SYNTHETIC grids)",
   });
 
   it("ABSTAIN with a reason and EMPTY arrays when one timeframe is one candle short (199 on 15m)", () => {
-    const r = buildPipelineCandles(full({ ...exact, "15m": 199 }), NOW);
+    const r = buildPipelineCandles(full({ ...exact, "15m": exact["15m"] - 1 }), NOW);
     expect(r.status).toBe("ABSTAIN");
-    expect(r.reason).toContain("15m: 199/200");
+    expect(r.reason).toContain(`15m: ${exact["15m"] - 1}/${exact["15m"]}`);
     for (const tf of PIPELINE_TIMEFRAMES) expect(r.candles[tf].length).toBe(0);
   });
 
-  it("a forming candle in the 200 rows read leaves 199 closed -> ABSTAIN; reading required+1 rows with one forming -> READY", () => {
+  it("a forming candle in the rows read leaves required-1 closed -> ABSTAIN; reading required+1 rows with one forming -> READY", () => {
     const withForming = (n: number) => {
       const rows = full({ ...exact, "1H": n });
       const t = lastClosedOpen("1H") + H;
       rows["1H"].push({ time: t, open: 1, high: 2, low: 1, close: 2, volume: 1, ingestedAt: NOW - 1 });
       return rows;
     };
-    const short = buildPipelineCandles(withForming(199), NOW);
+    const short = buildPipelineCandles(withForming(exact["1H"] - 1), NOW);
     expect(short.status).toBe("ABSTAIN");
     expect(short.reports["1H"].excluded).toEqual([{ time: lastClosedOpen("1H") + H, reason: "NOT_CLOSED" }]);
-    expect(buildPipelineCandles(withForming(200), NOW).status).toBe("READY");
+    expect(buildPipelineCandles(withForming(exact["1H"]), NOW).status).toBe("READY");
   });
 
   it("an UNFINALIZED newest candle is dropped and reported (the previous closed candle remains the last)", () => {
-    const rows = full({ ...exact, "1H": 201 }, (tf) => (tf === "1H" ? (i, c) => (i === 200 ? { ...c, ingestedAt: c.time + H - 5 } : c) : undefined));
+    const rows = full({ ...exact, "1H": exact["1H"] + 1 }, (tf) => (tf === "1H" ? (i, c) => (i === exact["1H"] ? { ...c, ingestedAt: c.time + H - 5 } : c) : undefined));
     const r = buildPipelineCandles(rows, NOW);
     expect(r.status).toBe("READY");
     expect(r.reports["1H"].excluded.map((e) => e.reason)).toEqual(["UNFINALIZED_SNAPSHOT"]);
@@ -147,9 +147,9 @@ describe("candle adapter: sufficiency and the pipeline input (SYNTHETIC grids)",
       const tf = (Object.keys(DB_TIMEFRAME) as PipelineTimeframe[]).find((k) => DB_TIMEFRAME[k] === dbTf) as PipelineTimeframe;
       return grid(tf, limit - 1, lastClosedOpen(tf)).reverse(); // newest first; one row short because the extra row is the forming one we do not add
     });
-    expect(asked).toEqual(["BTCUSDT:4h:201", "BTCUSDT:1h:201", "BTCUSDT:15m:201", "BTCUSDT:5m:31"]);
+    expect(asked).toEqual(PIPELINE_TIMEFRAMES.map((tf) => `BTCUSDT:${DB_TIMEFRAME[tf]}:${MIN_CLOSED_CANDLES[tf] + READ_MARGIN}`));
     expect(r.status).toBe("READY");
-    expect(r.candles["4H"][0].time < r.candles["4H"][199].time).toBe(true);
+    expect(r.candles["4H"][0].time < r.candles["4H"][MIN_CLOSED_CANDLES["4H"] - 1].time).toBe(true);
   });
 });
 

@@ -27,15 +27,7 @@
 مرجع تصمیم: 1H. پوشش 4h و 5m توسط هر Provider هنوز UNKNOWN است.
 
 ## ۳. حداقل کندل بستهٔ لازم
-| TF | حداقل | مصرف‌کننده | منبع |
-|---|---|---|---|
-| 4H | 200 | Delta Trend؛ Range ≥ 35 | `MIN_CANDLES` در `deltaforce.trend.ts`؛ `deltaforce.range.ts` |
-| 1H | 200 | Delta Trend؛ Verifier و R1 ≥ 50؛ عامل‌ها ≤ 50 | همان + `MIN_HISTORY` |
-| 15m | 200 | Delta Trend | `MIN_CANDLES` |
-| 5m | 30 | Delta Range | `deltaforce.range.ts` |
-هر عدد با تست «n−1 ← ABSTAIN و n ← مجاز» به رفتار واقعی کد گره می‌خورد. سقف ۲۰۰ کندل `ingest` بدون این محاسبه افزایش نمی‌یابد. حداقل عمق خواندن = لازم + ۱ (کندل در حال تشکیل).
-
-**یافته (P6):** RSI/StochRSI ویلدر به طول تاریخچه وابسته‌اند؛ روی fixture ۵ دقیقه‌ای، تریگر Range با ۴۰ کندل فعال می‌شود ولی با کوتاه‌ترین خواندن مجاز (۳۱ ردیف) فعال نمی‌شود. یعنی «حداقل برای NaN نبودن» با «عمق لازم برای نتیجهٔ پایدار» یکی نیست. عمق مرجع در V6 تعریف نشده و اختراع نشد؛ ورودی دقیق هر اجرا در `inputDataHash` ثبت می‌شود. **باز:** تعیین عمق خواندن مرجع ۵m (و سایر TFها) نیاز به تصمیم کاربر دارد.
+اعداد قبلی (200/200/200/30) فقط حداقل **تعریفی** ماژول‌ها بود. اندازه‌گیری روی داده واقعی نشان داد اندیکاتورهای بازگشتی تا عمق بیشتری وابسته به seed هستند؛ مرجع جدید: **360 / 360 / 360 / 120** برای 4H / 1H / 15m / 5m (جزئیات، روش و محدودیت‌ها: `docs/HISTORY_DEPTH.md`). حداقل ماژول‌ها همچنان 200/200/200/30 است و پایین‌تر از آن ماژول ABSTAIN می‌دهد. عمق خواندن = لازم + ۱.
 
 ## ۴. هویت سیگنال و چرخهٔ Setup
 - **signalKey**: `sha256(canonical{contract:1, symbol, market, direction, referenceTimeframe:"1H", lastClosedCandleOpenTime, setupFingerprint, configFingerprint})`. `now` در آن نیست.
@@ -82,6 +74,7 @@ CLI یا اجرای داخلی کنترل‌شده. بدون endpoint عمومی
 | P3 تراکنش agent_runs + audit، reconcile | TESTED | CI run 42003385005 |
 | P4 یکپارچگی Setup (Range) | TESTED | CI run 42012971981 |
 | P5 Outbox داخلی (فقط log) | TESTED | CI run 42092683207، PG 17.11 |
+| P-next عمق تاریخچه (docs/HISTORY_DEPTH.md) | IMPLEMENTED (CI در انتظار) | historyDepth.test.ts |
 | P6 Runner CLI + گارد State machine | TESTED (داده SYNTHETIC؛ اجرای زنده BLOCKED) | CI run 42093306727، PG 17.11 |
 | P7 Scheduler | NOT STARTED (نیازمند مجوز جدا) | — |
 BLOCKED: تعداد state (۸ یا ۹)، Futures (منبع داده انتخاب نشده)، Setup حالت Trend، عمق خواندن مرجع ۵m، اجرای Spot روی داده زندهٔ ۴-تایم‌فریم (بدون شبکه/DB داده در این محیط).

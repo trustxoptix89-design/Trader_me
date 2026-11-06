@@ -2,6 +2,7 @@
 // Turns stored candle rows into the per-timeframe arrays the pipeline consumes, admitting ONLY closed, finalized,
 // trustworthy candles. Pure: imports nothing but types, so it is testable without a database.
 import type { Candle } from "@contracts/types";
+import { STABLE_CLOSED_CANDLES } from "./historyRequirements";
 
 export const PIPELINE_TIMEFRAMES = ["4H", "1H", "15m", "5m"] as const;
 export type PipelineTimeframe = (typeof PIPELINE_TIMEFRAMES)[number];
@@ -11,11 +12,11 @@ export const TF_MS: Record<PipelineTimeframe, number> = { "4H": 14_400_000, "1H"
 export const DB_TIMEFRAME: Record<PipelineTimeframe, string> = { "4H": "4h", "1H": "1h", "15m": "15m", "5m": "5m" };
 
 /**
- * Minimum CLOSED candles per timeframe. Values come from the consumers (see PIPELINE_CONTRACT.md §3) and are tied to the real
- * behaviour of the indicator code by tests (n-1 -> ABSTAIN, n -> accepted):
- *  4H/1H/15m: Delta Trend MIN_CANDLES = 200 (EMA200). 5m: Delta Range needs 30 (its 4H need, 35, is below the 4H value).
+ * Required CLOSED candles per timeframe = the STABLE depth measured in docs/HISTORY_DEPTH.md (historyRequirements.ts).
+ * The indicator modules enforce only their definitional minimum (MIN_VALID_CANDLES); between that and this value the recursive indicators
+ * (EMA200 above all) are still seed-dependent, so the pipeline input is refused (ABSTAIN) rather than evaluated.
  */
-export const MIN_CLOSED_CANDLES: Record<PipelineTimeframe, number> = { "4H": 200, "1H": 200, "15m": 200, "5m": 30 };
+export const MIN_CLOSED_CANDLES: Record<PipelineTimeframe, number> = STABLE_CLOSED_CANDLES;
 /** Rows read beyond the minimum: exactly the one candle that may still be forming. More only if measured on real data. */
 export const READ_MARGIN = 1;
 
