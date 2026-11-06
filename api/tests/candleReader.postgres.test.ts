@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { candles } from "@db/schema";
 import { closeDb, getDb } from "../queries/connection";
 import { runMigrations } from "../queries/migrate";
-import { readPipelineCandles, TF_MS, type PipelineTimeframe } from "../pipeline/candleAdapter";
+import { MIN_CLOSED_CANDLES, readPipelineCandles, TF_MS, type PipelineTimeframe } from "../pipeline/candleAdapter";
 import { pgLoadRows } from "../pipeline/candleReader";
 
 // DB_PROBE-gated: real PostgreSQL. Data class: SYNTHETIC timing grids written to a disposable database (CI service container).
@@ -30,23 +30,23 @@ describe.skipIf(!enabled)("candle adapter reads real PostgreSQL", () => {
 
   it("migrations are applied", async () => { await runMigrations(); });
 
-  it("pgLoadRows returns the newest `limit` rows with ingestedAt in ms, and READY when 200/200/200/30 closed rows exist plus one forming 1H row", async () => {
-    await seed("4H", 200); await seed("1H", 200, { formingExtra: true }); await seed("15m", 200); await seed("5m", 30);
-    const raw = await pgLoadRows(symbol, "1h", 201);
-    expect(raw.length).toBe(201);
+  it("pgLoadRows returns the newest `limit` rows with ingestedAt in ms, and READY when the stable closed-row depth (MIN_CLOSED_CANDLES) exists plus one forming 1H row", async () => {
+    await seed("4H", MIN_CLOSED_CANDLES["4H"]); await seed("1H", MIN_CLOSED_CANDLES["1H"], { formingExtra: true }); await seed("15m", MIN_CLOSED_CANDLES["15m"]); await seed("5m", MIN_CLOSED_CANDLES["5m"]);
+    const raw = await pgLoadRows(symbol, "1h", MIN_CLOSED_CANDLES["1H"] + 1);
+    expect(raw.length).toBe(MIN_CLOSED_CANDLES["1H"] + 1);
     expect(typeof raw[0].ingestedAt).toBe("number");
     const r = await readPipelineCandles(symbol, NOW, pgLoadRows);
     expect(r.status).toBe("READY");
     expect(r.reports["1H"].excluded.map((e) => e.reason)).toEqual(["NOT_CLOSED"]);
-    expect(r.candles["1H"].length).toBe(200);
+    expect(r.candles["1H"].length).toBe(MIN_CLOSED_CANDLES["1H"]);
   });
 
   it("a stored snapshot captured before close is excluded end-to-end; the series becomes one short -> ABSTAIN", async () => {
     await getDb().delete(candles).where(eq(candles.symbol, symbol));
-    await seed("4H", 200); await seed("1H", 200, { unfinalizedNewest: true }); await seed("15m", 200); await seed("5m", 30);
+    await seed("4H", MIN_CLOSED_CANDLES["4H"]); await seed("1H", MIN_CLOSED_CANDLES["1H"], { unfinalizedNewest: true }); await seed("15m", MIN_CLOSED_CANDLES["15m"]); await seed("5m", MIN_CLOSED_CANDLES["5m"]);
     const r = await readPipelineCandles(symbol, NOW, pgLoadRows);
     expect(r.status).toBe("ABSTAIN");
     expect(r.reports["1H"].excluded.map((e) => e.reason)).toEqual(["UNFINALIZED_SNAPSHOT"]);
-    expect(r.reason).toContain("1H: 199/200");
+    expect(r.reason).toContain(`1H: ${MIN_CLOSED_CANDLES["1H"] - 1}/${MIN_CLOSED_CANDLES["1H"]}`);
   });
 });
