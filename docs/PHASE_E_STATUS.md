@@ -29,3 +29,22 @@
 4. `npx tsx api/pipeline/cli.ts --symbol BTCUSDT --market spot` و ذخیرهٔ JSON خروجی.
 5. بررسی SQL: رویداد DECISION در `audit_log` (kind=DECISION)، `agent_runs` (۷ ردیف OK یا ERROR مشخص)، `notification_outbox` (فقط برای approved).
 برچسب داده را در گزارش بنویسید: تا اجرای واقعی، همه‌چیز SYNTHETIC است.
+
+## به‌روزرسانی ۷ نوامبر ۲۰۲۶ (دستور اتصال واقعی اجزا)
+| جزء | وضعیت | توضیح |
+|---|---|---|
+| Data Quality → Runner → رویداد DATA_VALIDATED | TESTED | `runner.ts`: بعد از Candle Reader و قبل از Agentها؛ ناقص/کهنه/گپ/نامعتبر = ABSTAIN `DATA_QUALITY_FAILED`؛ خلاصهٔ کیفیت در detail رویداد حسابرسی (زنجیرهٔ hash) |
+| Cycle (`cycle.ts`): Run ID، مدت هر مرحله، retry خواندن (حداکثر caller)، timeout، مدیریت duplicate/concurrent/expired | TESTED (mock درون‌حافظه، SYNTHETIC) | Retry فقط برای مرحلهٔ خواندن؛ مرحلهٔ نوشتن هرگز retry نمی‌شود (جلوگیری از رأی/ردیف تکراری). Timeout فقط روی I/O ناهمزمان؛ مرحلهٔ CPU همزمان قابل قطع نیست. |
+| نگاشت ۵ برچسب (`labelOf`) | TESTED | approved→BUY_NOW، rejected→REJECT، inconclusive داده/زیرساخت→INSUFFICIENT_DATA، سایر inconclusive→WAIT. **CONDITIONAL_BUY هرگز تولید نمی‌شود** (قاعدهٔ V6 ندارد). نگاشت WAIT پیشنهادی و منتظر تأیید است. |
+| Scheduler خط‌لولهٔ جدید (`pipelineScheduler.ts`) | TESTED (فقط محیط تست) | به boot وصل نیست؛ Scheduler قدیمی (`api/scheduler.ts`) دست‌نخورده. جلوگیری از tick همپوشان، عدم توقف با شکست یک نماد، عدم انتشار مجدد سیگنال. |
+| Market Discovery (`marketDiscovery.ts`) | TESTED (منطق خالص)؛ Provider: BLOCKED | هیچ adapter HTTP ارسال نشد. |
+| Timeout/Retry واقعی برای خود Agentها | NOT_IMPLEMENTED | Agentها همزمان و قطعی‌اند؛ Timeout/Retry در سطح Runner/Cycle روی I/O اعمال می‌شود. |
+
+### منابع داده (بررسی دسترسی از این محیط، ۷ نوامبر ۲۰۲۶)
+curl به همهٔ این‌ها کد 000 (بدون پاسخ): CoinGecko، CoinPaprika، CryptoCompare، Kraken، Coinbase، KuCoin، Gate.io، OKX، Binance، Bybit. بنابراین هیچ Providerی تأیید یا فعال نشد. دسترسی از ایران برای هیچ‌کدام راستی‌آزمایی نشده (Needs verification). Futures: BLOCKED.
+
+### نمونهٔ خروجی Cycle (SYNTHETIC، شکل خروجی؛ داده بازار نیست)
+`label=REJECT`, `reason=RISK_REJECT: invalid entry/invalidation/target geometry or ATR`، stages READ(attempts 1, retries 0)+PIPELINE، `statesVisited=DETECTED,DATA_VALIDATED,INDICATORS_READY,AGENTS_RUN,RECONCILED,RISK_CHECKED,RECORDED`، کیفیت ۴ تایم‌فریم ok/fresh، `signal=null`. (اجرای `api/tests/sampleCycle.test.ts` همین JSON را چاپ می‌کند.)
+
+### آزمون‌های PostgreSQL واقعی و داده واقعی برای Cycle
+NOT_IMPLEMENTED برای Cycle/Scheduler؛ تست‌های cycle فقط mock هستند. recorderهای PG (P3/P5) جداگانه روی PG 17 تست شده‌اند.
