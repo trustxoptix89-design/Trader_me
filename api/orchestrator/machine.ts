@@ -66,6 +66,8 @@ export interface PipelineInput {
   chart?: ChartClaims;
   /** Other deterministic agents. Delta Force is always run by the machine itself. */
   agents?: Array<((ctx: AgentContext) => AgentVote) | IdentifiedAgent>;
+  /** Data Quality report produced upstream (api/pipeline/dataQuality.ts). Recorded verbatim in the DATA_VALIDATED audit event; it never changes the machine's own decisions. */
+  dataQuality?: Record<string, unknown>;
   /** Learned agent weights (post-mortem). They never override the Delta Force ULTRA_TREND weight. */
   weights?: Record<string, number>;
   source?: string;
@@ -243,7 +245,7 @@ export async function runSignalPipeline(input: PipelineInput): Promise<PipelineR
       roomVerdicts[`DATA_${tf}`] = { status: r.status, reason: r.reason, flags: r.flags, metrics: r.metrics };
     }
     dataValid = true;
-    await transition("DATA_VALIDATED", "PASS", "all timeframes valid");
+    await transition("DATA_VALIDATED", "PASS", "all timeframes valid", input.dataQuality ? { detail: { dataQuality: input.dataQuality } } : undefined);
 
     // INDICATORS_READY: Delta Force. RANGE_DETECTED is routed to Range Mode instead of ABSTAIN.
     trend = evaluateDeltaTrend(input.candles["4H"], input.candles["1H"], input.candles["15m"]);
